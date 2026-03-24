@@ -14,13 +14,19 @@ SRS_INTERVALS = {
 }
 
 
-def get_due_cards(limit: int = 10) -> list[KanaCard]:
+def get_due_cards(limit: int = 10, kana_type: str | None = None) -> list[KanaCard]:
     conn = get_shared_connection()
     now = datetime.now().isoformat()
-    rows = conn.execute(
-        'SELECT * FROM kana_srs WHERE next_review <= ? ORDER BY level ASC, next_review ASC LIMIT ?',
-        (now, limit)
-    ).fetchall()
+    if kana_type:
+        rows = conn.execute(
+            'SELECT * FROM kana_srs WHERE next_review <= ? AND type = ? ORDER BY level ASC, next_review ASC LIMIT ?',
+            (now, kana_type, limit)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            'SELECT * FROM kana_srs WHERE next_review <= ? ORDER BY level ASC, next_review ASC LIMIT ?',
+            (now, limit)
+        ).fetchall()
     return [KanaCard(**dict(row)) for row in rows]
 
 
@@ -57,10 +63,15 @@ def save_mnemonic(card_id: int, mnemonic: str) -> None:
     conn.commit()
 
 
-def get_stats() -> dict:
+def get_stats(kana_type: str | None = None) -> dict:
     conn = get_shared_connection()
-    total = conn.execute('SELECT COUNT(*) FROM kana_srs').fetchone()[0]
     now = datetime.now().isoformat()
-    due = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE next_review <= ?', (now,)).fetchone()[0]
-    mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= 4').fetchone()[0]
+    if kana_type:
+        total = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE type = ?', (kana_type,)).fetchone()[0]
+        due = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE next_review <= ? AND type = ?', (now, kana_type)).fetchone()[0]
+        mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= 4 AND type = ?', (kana_type,)).fetchone()[0]
+    else:
+        total = conn.execute('SELECT COUNT(*) FROM kana_srs').fetchone()[0]
+        due = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE next_review <= ?', (now,)).fetchone()[0]
+        mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= 4').fetchone()[0]
     return {'total': total, 'due': due, 'mastered': mastered}

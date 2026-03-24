@@ -139,12 +139,12 @@ Calendar {
 }
 
 /* SRS card word centering */
-#kana-word, #eng-word {
+#katakana-word, #hiragana-word, #kana-word, #eng-word, #kanji-char {
     text-align: center;
     padding: 1 0;
 }
 
-#kana-actions, #eng-actions {
+#katakana-actions, #hiragana-actions, #kana-actions, #eng-actions, #kanji-actions {
     margin-top: 1;
     color: #58a6ff;
 }

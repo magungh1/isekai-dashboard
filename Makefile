@@ -1,4 +1,4 @@
-.PHONY: run init extract ingest clean help test test-quests test-srs test-english test-clients
+.PHONY: run init extract ingest clean help test test-quests test-srs test-english test-kanji test-clients
 
 help:
 	@echo "Available commands:"
@@ -10,6 +10,7 @@ help:
 	@echo "  make test-quests           - Run quest service tests"
 	@echo "  make test-srs              - Run kana SRS tests"
 	@echo "  make test-english          - Run English SRS tests"
+	@echo "  make test-kanji            - Run kanji SRS tests"
 	@echo "  make test-clients          - Run client tests"
 	@echo "  make clean                 - Clean up cache files (__pycache__, uv cache)"
 
@@ -44,6 +45,9 @@ test-srs:
 
 test-english:
 	uv run pytest tests/test_english_srs_service.py -v
+
+test-kanji:
+	uv run pytest tests/test_kanji_srs_service.py -v
 
 test-clients:
 	uv run pytest tests/test_clients.py -v

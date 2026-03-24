@@ -51,6 +51,18 @@ def use_temp_db(tmp_path):
             next_review TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kanji_srs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kanji TEXT NOT NULL UNIQUE,
+            kun_reading TEXT,
+            on_reading TEXT,
+            meaning TEXT NOT NULL,
+            mnemonic TEXT,
+            level INTEGER DEFAULT 0,
+            next_review TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
 
     yield

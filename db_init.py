@@ -399,6 +399,84 @@ def init_db():
         except sqlite3.IntegrityError:
             pass
 
+    # Create kanji_srs table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS kanji_srs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kanji TEXT NOT NULL UNIQUE,
+            kun_reading TEXT,
+            on_reading TEXT,
+            meaning TEXT NOT NULL,
+            mnemonic TEXT,
+            level INTEGER DEFAULT 0,
+            next_review TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Seed kanji (JLPT N5/N4 common kanji)
+    KANJI_VOCAB = [
+        # (kanji, kun_reading, on_reading, meaning)
+        ('日', 'ひ', 'ニチ/ジツ', 'day, sun'),
+        ('月', 'つき', 'ゲツ/ガツ', 'month, moon'),
+        ('火', 'ひ', 'カ', 'fire'),
+        ('水', 'みず', 'スイ', 'water'),
+        ('木', 'き', 'モク/ボク', 'tree, wood'),
+        ('金', 'かね', 'キン/コン', 'gold, money'),
+        ('土', 'つち', 'ド/ト', 'earth, soil'),
+        ('人', 'ひと', 'ジン/ニン', 'person'),
+        ('大', 'おおきい', 'ダイ/タイ', 'big, large'),
+        ('小', 'ちいさい', 'ショウ', 'small, little'),
+        ('山', 'やま', 'サン', 'mountain'),
+        ('川', 'かわ', 'セン', 'river'),
+        ('田', 'た', 'デン', 'rice field'),
+        ('中', 'なか', 'チュウ', 'middle, inside'),
+        ('上', 'うえ', 'ジョウ', 'above, up'),
+        ('下', 'した', 'カ/ゲ', 'below, down'),
+        ('左', 'ひだり', 'サ', 'left'),
+        ('右', 'みぎ', 'ウ/ユウ', 'right'),
+        ('一', 'ひとつ', 'イチ', 'one'),
+        ('二', 'ふたつ', 'ニ', 'two'),
+        ('三', 'みっつ', 'サン', 'three'),
+        ('四', 'よっつ', 'シ', 'four'),
+        ('五', 'いつつ', 'ゴ', 'five'),
+        ('六', 'むっつ', 'ロク', 'six'),
+        ('七', 'ななつ', 'シチ', 'seven'),
+        ('八', 'やっつ', 'ハチ', 'eight'),
+        ('九', 'ここのつ', 'キュウ/ク', 'nine'),
+        ('十', 'とお', 'ジュウ', 'ten'),
+        ('百', None, 'ヒャク', 'hundred'),
+        ('千', 'ち', 'セン', 'thousand'),
+        ('万', None, 'マン/バン', 'ten thousand'),
+        ('食', 'たべる', 'ショク', 'eat, food'),
+        ('飲', 'のむ', 'イン', 'drink'),
+        ('見', 'みる', 'ケン', 'see, look'),
+        ('聞', 'きく', 'ブン/モン', 'hear, listen, ask'),
+        ('読', 'よむ', 'ドク', 'read'),
+        ('書', 'かく', 'ショ', 'write'),
+        ('話', 'はなす', 'ワ', 'talk, speak'),
+        ('言', 'いう', 'ゲン/ゴン', 'say, word'),
+        ('行', 'いく', 'コウ/ギョウ', 'go'),
+        ('来', 'くる', 'ライ', 'come'),
+        ('出', 'でる', 'シュツ', 'exit, go out'),
+        ('入', 'はいる', 'ニュウ', 'enter'),
+        ('立', 'たつ', 'リツ', 'stand'),
+        ('休', 'やすむ', 'キュウ', 'rest'),
+        ('学', 'まなぶ', 'ガク', 'study, learn'),
+        ('生', 'いきる', 'セイ/ショウ', 'life, live, birth'),
+        ('先', 'さき', 'セン', 'previous, ahead'),
+        ('名', 'な', 'メイ/ミョウ', 'name'),
+        ('年', 'とし', 'ネン', 'year'),
+    ]
+
+    for kanji, kun, on, meaning in KANJI_VOCAB:
+        try:
+            cursor.execute(
+                'INSERT INTO kanji_srs (kanji, kun_reading, on_reading, meaning) VALUES (?, ?, ?, ?)',
+                (kanji, kun, on, meaning)
+            )
+        except sqlite3.IntegrityError:
+            pass
+
     # Seed some default quests if empty
     cursor.execute("SELECT COUNT(*) FROM quests")
     if cursor.fetchone()[0] == 0:
@@ -417,6 +495,7 @@ def init_db():
     print("Database initialized and seeded successfully.")
     print(f"  Hiragana words: {len(HIRAGANA_VOCAB)}")
     print(f"  English words: {len(ENGLISH_VOCAB)}")
+    print(f"  Kanji: {len(KANJI_VOCAB)}")
 
 
 if __name__ == '__main__':

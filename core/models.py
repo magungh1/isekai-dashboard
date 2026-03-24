@@ -26,6 +26,18 @@ class KanaCard:
 
 
 @dataclass
+class KanjiCard:
+    id: int
+    kanji: str
+    kun_reading: str | None
+    on_reading: str | None
+    meaning: str
+    mnemonic: str | None
+    level: int
+    next_review: str
+
+
+@dataclass
 class VocabCard:
     id: int
     word: str

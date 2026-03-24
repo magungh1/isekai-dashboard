@@ -28,12 +28,13 @@ def ingest_csv(csv_path):
             # Ensure the row has word, type, and meaning
             if len(row) >= 3:
                 word = row[0].strip()
+                word_type = row[1].strip()
                 meaning = row[2].strip()
                 
                 try:
                     cursor.execute(
-                        'INSERT INTO kana_srs (word, meaning) VALUES (?, ?)',
-                        (word, meaning)
+                        'INSERT INTO kana_srs (word, meaning, type) VALUES (?, ?, ?)',
+                        (word, meaning, word_type)
                     )
                     count += 1
                 except sqlite3.IntegrityError:

@@ -4,11 +4,11 @@ from core.db import get_shared_connection
 from services.srs_service import get_due_cards, review_card, save_mnemonic, get_stats
 
 
-def _seed_card(word="テスト", meaning="Test", level=0):
+def _seed_card(word="テスト", meaning="Test", level=0, kana_type="katakana"):
     conn = get_shared_connection()
     conn.execute(
-        'INSERT INTO kana_srs (word, meaning, level, next_review) VALUES (?, ?, ?, ?)',
-        (word, meaning, level, datetime.now().isoformat())
+        'INSERT INTO kana_srs (word, meaning, level, next_review, type) VALUES (?, ?, ?, ?, ?)',
+        (word, meaning, level, datetime.now().isoformat(), kana_type)
     )
     conn.commit()
     row = conn.execute('SELECT id FROM kana_srs WHERE word = ?', (word,)).fetchone()
@@ -65,3 +65,26 @@ def test_get_stats():
     stats = get_stats()
     assert stats['total'] == 2
     assert stats['mastered'] == 1
+
+
+def test_get_due_cards_filters_by_type():
+    _seed_card("コーヒー", "coffee", kana_type="katakana")
+    _seed_card("あお", "blue", kana_type="hiragana")
+    kata_cards = get_due_cards(kana_type="katakana")
+    hira_cards = get_due_cards(kana_type="hiragana")
+    assert len(kata_cards) == 1
+    assert kata_cards[0].word == "コーヒー"
+    assert len(hira_cards) == 1
+    assert hira_cards[0].word == "あお"
+
+
+def test_get_stats_filters_by_type():
+    _seed_card("テスト1", "Test1", level=0, kana_type="katakana")
+    _seed_card("テスト2", "Test2", level=5, kana_type="katakana")
+    _seed_card("あか", "red", level=0, kana_type="hiragana")
+    kata_stats = get_stats(kana_type="katakana")
+    hira_stats = get_stats(kana_type="hiragana")
+    assert kata_stats['total'] == 2
+    assert kata_stats['mastered'] == 1
+    assert hira_stats['total'] == 1
+    assert hira_stats['mastered'] == 0

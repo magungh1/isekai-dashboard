@@ -38,6 +38,39 @@ def generate_mnemonic(word: str, meaning: str) -> str | None:
         return None
 
 
+def generate_kanji_mnemonic(kanji: str, meaning: str,
+                            kun: str | None, on: str | None) -> str | None:
+    client = get_client()
+    if client is None:
+        return None
+
+    readings = []
+    if kun:
+        readings.append(f"kun: {kun}")
+    if on:
+        readings.append(f"on: {on}")
+    reading_str = ", ".join(readings) if readings else "no common readings"
+
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{
+                'role': 'user',
+                'content': (
+                    f"You are a kanji tutor for an ML Engineer. "
+                    f"Create a short, clever mnemonic to remember the kanji "
+                    f"'{kanji}' which means '{meaning}' ({reading_str}). "
+                    f"Use visual decomposition, radicals, or stories. "
+                    f"Keep it under 25 words. Reply with ONLY the mnemonic, nothing else."
+                )
+            }],
+            max_tokens=100,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception:
+        return None
+
+
 def generate_english_mnemonic(word: str, definition: str) -> str | None:
     client = get_client()
     if client is None:

@@ -15,9 +15,20 @@ def get_existing_words(csv_path: str) -> Set[str]:
         try:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
+            
+            # Check kana_srs
             cursor.execute("SELECT word FROM kana_srs")
             for row in cursor.fetchall():
                 words.add(row[0])
+                
+            # Check kanji_srs if it exists
+            try:
+                cursor.execute("SELECT kanji FROM kanji_srs")
+                for row in cursor.fetchall():
+                    words.add(row[0])
+            except sqlite3.OperationalError:
+                pass # Table might not exist yet
+                
             conn.close()
         except Exception as e:
             print(f"Warning: Could not read from database. {e}")
@@ -48,14 +59,16 @@ def extract_vocab_from_text(text: str, client: OpenAI) -> list[dict]:
     1. word: The Japanese word (in its original/dictionary form).
     2. type: The character type, choose exactly one from: 'katakana', 'hiragana', or 'kanji'.
     3. meaning: The English meaning of the word in this context.
+    4. kun_reading: The Kun'yomi (Japanese reading) in hiragana. ONLY required if type is 'kanji', otherwise leave empty ("").
+    5. on_reading: The On'yomi (Chinese reading) in katakana. ONLY required if type is 'kanji', otherwise leave empty ("").
     
-    Return the result STRICTLY as a JSON array of objects, with keys "word", "type", "meaning". 
+    Return the result STRICTLY as a JSON array of objects, with keys "word", "type", "meaning", "kun_reading", "on_reading". 
     Do not include markdown formatting like ```json or any other text.
     
     Example output format:
     [
-        {{"word": "パソコン", "type": "katakana", "meaning": "personal computer"}},
-        {{"word": "食べる", "type": "kanji", "meaning": "to eat"}}
+        {{"word": "パソコン", "type": "katakana", "meaning": "personal computer", "kun_reading": "", "on_reading": ""}},
+        {{"word": "食", "type": "kanji", "meaning": "eat, food", "kun_reading": "た.べる", "on_reading": "ショク"}}
     ]
     
     Text:
