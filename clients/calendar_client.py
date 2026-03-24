@@ -1,5 +1,11 @@
+import re
 import shutil
 import subprocess
+
+
+_MEET_URL_RE = re.compile(
+    r'https?://(?:meet\.google\.com|[\w.]*zoom\.us|teams\.microsoft\.com)\S+'
+)
 
 
 def _find_icalbuddy() -> str | None:
@@ -14,7 +20,8 @@ def _find_icalbuddy() -> str | None:
     return None
 
 
-def fetch_today_events() -> list[str] | None:
+def fetch_today_events() -> list[dict] | None:
+    """Return list of event dicts with keys: title, time (optional), url (optional)."""
     ical_path = _find_icalbuddy()
     if not ical_path:
         return None
@@ -26,18 +33,24 @@ def fetch_today_events() -> list[str] | None:
         output = result.stdout.strip()
         if not output:
             return []
-        # Parse icalBuddy output: event titles start with '•',
-        # indented lines are metadata (notes, attendees) — skip those
         events = []
-        current_event = None
+        current = None
         for line in output.split('\n'):
             if line.startswith('•'):
-                current_event = line.replace('• ', '').strip()
-                events.append(current_event)
-            elif current_event and line.strip().startswith(('0', '1', '2')):
-                # Time line like "18.00 - 18.15" — append to current event
-                time_str = line.strip()
-                events[-1] = f"{current_event} ({time_str})"
+                current = {
+                    'title': line.replace('• ', '').strip(),
+                    'time': None,
+                    'url': None,
+                }
+                events.append(current)
+            elif current is None:
+                continue
+            elif line.strip().startswith(('0', '1', '2')):
+                current['time'] = line.strip()
+            elif current['url'] is None:
+                match = _MEET_URL_RE.search(line)
+                if match:
+                    current['url'] = match.group(0)
         return events
     except FileNotFoundError:
         return None

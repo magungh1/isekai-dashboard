@@ -31,7 +31,24 @@ def test_fetch_today_events_success():
     with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
         events = fetch_today_events()
         assert len(events) == 2
-        assert "Team standup" in events[0]
+        assert events[0]['title'] == "Team standup"
+        assert events[0]['url'] is None
+
+
+def test_fetch_today_events_with_meet_link():
+    mock_result = MagicMock()
+    mock_result.stdout = (
+        "• Daily Sync\n"
+        "    notes: Join with Google Meet: https://meet.google.com/abc-defg-hij\n"
+        "    18.00 - 18.15\n"
+    )
+
+    with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
+        events = fetch_today_events()
+        assert len(events) == 1
+        assert events[0]['title'] == "Daily Sync"
+        assert events[0]['url'] == "https://meet.google.com/abc-defg-hij"
+        assert events[0]['time'] == "18.00 - 18.15"
 
 
 def test_fetch_today_events_no_events():
