@@ -35,7 +35,7 @@ class EnglishVocab(Static):
         yield Label("", id="eng-definition", classes="kana-mean")
         yield Label("", id="eng-example", classes="kana-sub")
         yield Label("", id="eng-mnemonic", classes="kana-sub")
-        yield Label("SPACE=Flip", id="eng-actions", classes="kana-sub")
+        yield Label("space: Flip", id="eng-actions", classes="kana-sub")
 
     def on_mount(self) -> None:
         self.load_cards()
@@ -73,7 +73,7 @@ class EnglishVocab(Static):
         self.query_one("#eng-definition", Label).update("")
         self.query_one("#eng-example", Label).update("")
         self.query_one("#eng-mnemonic", Label).update("")
-        self.query_one("#eng-actions", Label).update("SPACE=Flip")
+        self.query_one("#eng-actions", Label).update("space: Flip")
 
     def _show_back(self) -> None:
         card = self._current_card

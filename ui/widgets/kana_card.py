@@ -39,7 +39,7 @@ class KanaOfTheDay(Static):
         yield Label("", id="kana-romaji", classes="kana-sub")
         yield Label("", id="kana-meaning", classes="kana-mean")
         yield Label("", id="kana-mnemonic", classes="kana-sub")
-        yield Label("SPACE=Flip", id="kana-actions", classes="kana-sub")
+        yield Label("space: Flip", id="kana-actions", classes="kana-sub")
 
     def on_mount(self) -> None:
         self.load_cards()
@@ -78,7 +78,7 @@ class KanaOfTheDay(Static):
         self.query_one("#kana-romaji", Label).update(f"{tag} | Level: {level_stars}")
         self.query_one("#kana-meaning", Label).update("")
         self.query_one("#kana-mnemonic", Label).update("")
-        self.query_one("#kana-actions", Label).update("SPACE=Show Romaji")
+        self.query_one("#kana-actions", Label).update("space: Show Romaji")
 
     def _show_romaji(self) -> None:
         """State 1: Reveal romaji and the alternate script (katakana↔hiragana)."""
@@ -95,7 +95,7 @@ class KanaOfTheDay(Static):
             alt_label = f"カタカナ: {alt}"
         self.query_one("#kana-alt", Label).update(alt_label)
         self.query_one("#kana-romaji", Label).update(f"({romaji})")
-        self.query_one("#kana-actions", Label).update("SPACE=Show Meaning")
+        self.query_one("#kana-actions", Label).update("space: Show Meaning")
 
     def _show_back(self) -> None:
         """State 2: Reveal meaning, mnemonic, and rating buttons."""
