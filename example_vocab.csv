@@ -1,0 +1,26 @@
+# word,type,meaning
+# Lines starting with # are ignored
+#
+# Katakana (loanwords)
+パソコン,katakana,personal computer
+インターネット,katakana,internet
+プログラム,katakana,program
+アルゴリズム,katakana,algorithm
+データ,katakana,data
+サーバー,katakana,server
+クラウド,katakana,cloud
+ネットワーク,katakana,network
+セキュリティ,katakana,security
+バグ,katakana,bug
+#
+# Hiragana (native Japanese)
+さくら,hiragana,cherry blossom
+つなみ,hiragana,tsunami
+すし,hiragana,sushi
+おりがみ,hiragana,origami
+からおけ,hiragana,karaoke
+しあわせ,hiragana,happiness
+なつかしい,hiragana,nostalgic
+もったいない,hiragana,wasteful
+いただきます,hiragana,bon appetit
+おつかれさま,hiragana,good work (greeting)

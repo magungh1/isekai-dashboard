@@ -1,0 +1,17 @@
+# word,part_of_speech,definition,example
+# Lines starting with # are ignored
+# Example column is optional
+#
+# Tech & Engineering
+idempotent,adj,producing the same result regardless of how many times applied,PUT requests should be idempotent
+heuristic,noun,a practical approach to problem-solving not guaranteed to be optimal,We used a heuristic to approximate the optimal solution
+deterministic,adj,producing the same output given the same input,Unit tests should be deterministic
+orthogonal,adj,independent; not affecting each other,Authentication and authorization are orthogonal concerns
+latency,noun,the delay before a transfer of data begins,Reducing network latency improves user experience
+#
+# Advanced vocabulary
+recondite,adj,little known; abstruse,The recondite documentation was hard to follow
+perspicacious,adj,having keen mental perception and understanding,A perspicacious reviewer catches subtle bugs
+ineffable,adj,too great or extreme to be expressed in words,The ineffable beauty of an elegant algorithm
+surreptitious,adj,kept secret because it would not be approved of,Surreptitious data collection erodes user trust
+inexorable,adj,impossible to stop or prevent,The inexorable march of technological progress

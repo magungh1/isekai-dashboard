@@ -1,0 +1,121 @@
+Screen {
+    background: #0D1117;
+}
+
+#dashboard-grid {
+    layout: grid;
+    grid-size: 2 2;
+    grid-columns: 1fr 1fr;
+    grid-rows: 1fr 1fr;
+    padding: 1;
+}
+
+.tool-widget {
+    border: tall #00ffcc;
+    background: #161b22;
+    padding: 1 2;
+    margin: 1;
+    height: 100%;
+    overflow-y: scroll;
+}
+
+.widget-title {
+    text-style: bold;
+    color: #ff00ff;
+    border-bottom: solid #00ffcc 30%;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+.quest-done {
+    color: #8b949e;
+    text-style: strike;
+}
+
+.quest-pending {
+    color: #c9d1d9;
+}
+
+.pr-merged {
+    color: #2ea043;
+}
+
+.pr-review {
+    color: #d29922;
+}
+
+.pr-failed {
+    color: #f85149;
+}
+
+.kana-large {
+    text-style: bold;
+    color: #58a6ff;
+    width: 100%;
+}
+
+.kana-sub {
+    color: #8b949e;
+    width: 100%;
+}
+
+.kana-mean {
+    margin-top: 1;
+    color: #c9d1d9;
+    width: 100%;
+}
+
+#quest-input {
+    dock: bottom;
+    margin-top: 1;
+    background: #0d1117;
+    border: tall #00ffcc 50%;
+    color: #c9d1d9;
+}
+
+#quest-list, #pr-list, #cal-list {
+    height: 1fr;
+}
+
+ListView > ListItem {
+    background: transparent;
+}
+
+ListView > ListItem:hover {
+    background: #1c2333;
+}
+
+ListView:focus > ListItem.--highlight {
+    background: #1c2333;
+}
+
+/* SRS Tabs */
+#srs-tabs {
+    height: 100%;
+}
+
+TabbedContent {
+    background: #161b22;
+}
+
+Tab {
+    color: #8b949e;
+    background: #161b22;
+}
+
+Tab.-active {
+    color: #ff00ff;
+    background: #161b22;
+}
+
+Tab:hover {
+    color: #00ffcc;
+}
+
+TabPane {
+    padding: 0;
+}
+
+ContentSwitcher {
+    height: 1fr;
+}
