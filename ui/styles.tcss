@@ -17,6 +17,10 @@ Screen {
     margin: 1;
     height: 100%;
     overflow-y: scroll;
+    scrollbar-color: #30363d;
+    scrollbar-color-hover: #00ffcc;
+    scrollbar-color-active: #00ffcc;
+    scrollbar-background: #161b22;
 }
 
 .widget-title {
@@ -79,6 +83,11 @@ Screen {
 
 ListView > ListItem {
     background: transparent;
+    padding: 0 1;
+}
+
+ListView > ListItem > Label {
+    width: 100%;
 }
 
 ListView > ListItem:hover {
@@ -118,4 +127,24 @@ TabPane {
 
 ContentSwitcher {
     height: 1fr;
+}
+
+/* Widget background differentiation */
+PullRequests {
+    background: #1a1625;
+}
+
+Calendar {
+    background: #151d22;
+}
+
+/* SRS card word centering */
+#kana-word, #eng-word {
+    text-align: center;
+    padding: 1 0;
+}
+
+#kana-actions, #eng-actions {
+    margin-top: 1;
+    color: #58a6ff;
 }
