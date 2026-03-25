@@ -66,7 +66,7 @@ def test_fetch_today_events_not_installed():
 
 
 def test_generate_mnemonic_no_api_key():
-    with patch("clients.llm_client.OPENROUTER_API_KEY", ""):
+    with patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False):
         result = generate_mnemonic("テスト", "Test")
         assert result is None
 

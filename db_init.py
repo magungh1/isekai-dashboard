@@ -329,7 +329,27 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             status TEXT DEFAULT 'pending',
+            category TEXT DEFAULT 'daily',
+            deadline TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Migrations for existing DBs
+    try:
+        cursor.execute("ALTER TABLE quests ADD COLUMN category TEXT DEFAULT 'daily'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE quests ADD COLUMN deadline TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    # Create meta table for tracking resets
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY,
+            value TEXT
         )
     ''')
 
@@ -481,14 +501,18 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM quests")
     if cursor.fetchone()[0] == 0:
         default_quests = [
-            "Review Katakana Flashcards",
-            "Review Hiragana Flashcards",
-            "Review English Vocabulary",
-            "Check GitHub PRs",
-            "Read an ML paper"
+            ("Review Katakana Flashcards", "daily"),
+            ("Review Hiragana Flashcards", "daily"),
+            ("Read an ML paper", "daily"),
+            ("Check GitHub PRs", "weekly"),
+            ("Review English Vocabulary", "weekly"),
+            ("Catch up on ML training/inference fundamentals", "goals"),
         ]
-        for quest in default_quests:
-            cursor.execute('INSERT INTO quests (title, status) VALUES (?, ?)', (quest, 'pending'))
+        for title, category in default_quests:
+            cursor.execute(
+                'INSERT INTO quests (title, status, category) VALUES (?, ?, ?)',
+                (title, 'pending', category)
+            )
 
     conn.commit()
     conn.close()

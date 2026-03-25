@@ -157,10 +157,16 @@ def main():
     with open(args.output, 'a', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["# word", "type", "meaning"])
+            writer.writerow(["# word", "type", "meaning", "kun_reading", "on_reading"])
             
         for vocab in new_vocabs:
-            writer.writerow([vocab.get("word"), vocab.get("type"), vocab.get("meaning")])
+            writer.writerow([
+                vocab.get("word", ""), 
+                vocab.get("type", ""), 
+                vocab.get("meaning", ""),
+                vocab.get("kun_reading", ""),
+                vocab.get("on_reading", "")
+            ])
             
     print(f"Done! {len(new_vocabs)} words appended. Please review {args.output} before inserting into the DB.")
 

@@ -14,10 +14,10 @@ help:
 	@echo "  make test-clients          - Run client tests"
 	@echo "  make clean                 - Clean up cache files (__pycache__, uv cache)"
 
-run:
+run: clean
 	uv run main.py
 
-init:
+init: clean
 	uv run db_init.py
 
 extract:
@@ -34,22 +34,22 @@ ingest:
 	fi
 	uv run ingest_csv.py "$(FILE)"
 
-test:
+test: clean
 	uv run pytest tests/ -v
 
-test-quests:
+test-quests: clean
 	uv run pytest tests/test_quests_service.py -v
 
-test-srs:
+test-srs: clean
 	uv run pytest tests/test_srs_service.py -v
 
-test-english:
+test-english: clean
 	uv run pytest tests/test_english_srs_service.py -v
 
-test-kanji:
+test-kanji: clean
 	uv run pytest tests/test_kanji_srs_service.py -v
 
-test-clients:
+test-clients: clean
 	uv run pytest tests/test_clients.py -v
 
 clean:

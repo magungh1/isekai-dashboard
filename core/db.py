@@ -1,7 +1,10 @@
 import sqlite3
 import os
+import threading
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'isekai.db')
+
+db_lock = threading.Lock()
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)

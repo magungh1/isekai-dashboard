@@ -8,6 +8,8 @@ class Quest:
     title: str
     status: str  # 'pending' or 'done'
     created_at: str
+    category: str = 'daily'  # 'daily', 'weekly', 'goals'
+    deadline: str | None = None
 
     @property
     def is_done(self) -> bool:

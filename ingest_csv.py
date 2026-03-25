@@ -32,10 +32,19 @@ def ingest_csv(csv_path):
                 meaning = row[2].strip()
                 
                 try:
-                    cursor.execute(
-                        'INSERT INTO kana_srs (word, meaning, type) VALUES (?, ?, ?)',
-                        (word, meaning, word_type)
-                    )
+                    if word_type == 'kanji':
+                        kun_reading = row[3].strip() if len(row) > 3 else ""
+                        on_reading = row[4].strip() if len(row) > 4 else ""
+                        
+                        cursor.execute(
+                            'INSERT INTO kanji_srs (kanji, kun_reading, on_reading, meaning) VALUES (?, ?, ?, ?)',
+                            (word, kun_reading, on_reading, meaning)
+                        )
+                    else:
+                        cursor.execute(
+                            'INSERT INTO kana_srs (word, meaning, type) VALUES (?, ?, ?)',
+                            (word, meaning, word_type)
+                        )
                     count += 1
                 except sqlite3.IntegrityError:
                     # Word already exists in DB, skip

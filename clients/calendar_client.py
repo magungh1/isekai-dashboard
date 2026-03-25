@@ -27,7 +27,7 @@ def fetch_today_events() -> list[dict] | None:
         return None
     try:
         result = subprocess.run(
-            [ical_path, '-nc', '-n', '-ps', '|', 'eventsToday'],
+            [ical_path, '-nc', 'eventsToday'],
             capture_output=True, text=True
         )
         output = result.stdout.strip()

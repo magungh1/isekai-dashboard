@@ -25,7 +25,15 @@ def use_temp_db(tmp_path):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             status TEXT DEFAULT 'pending',
+            category TEXT DEFAULT 'daily',
+            deadline TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY,
+            value TEXT
         )
     ''')
     conn.execute('''
