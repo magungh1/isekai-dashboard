@@ -1,10 +1,13 @@
 import random
+import subprocess
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Static, Label, Button
 from textual.binding import Binding
 from textual.timer import Timer
+
+from services.xp_service import add_xp, XP_POMODORO_COMPLETE
 
 IDLE = "idle"
 WORK = "work"
@@ -49,8 +52,18 @@ FGO_QUOTES = [
 ]
 
 
+def _send_macos_notification(title: str, message: str) -> None:
+    try:
+        subprocess.Popen([
+            'osascript', '-e',
+            f'display notification "{message}" with title "{title}" sound name "Glass"'
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+
 class Pomodoro(Static):
-    """Pomodoro timer with FGO motivational quotes."""
+    """Pomodoro timer with FGO motivational quotes and session tracking."""
 
     BINDINGS = [
         Binding("s", "toggle_timer", "Start/Pause", show=True),
@@ -65,9 +78,11 @@ class Pomodoro(Static):
         self._seconds_left = WORK_MINUTES * 60
         self._timer: Timer | None = None
         self._current_quote = random.choice(FGO_QUOTES)
+        self._sessions_today = 0
 
     def compose(self) -> ComposeResult:
         yield Label("⏱ [ 修行 ] POMODORO", classes="widget-title")
+        yield Label("", id="pomo-sessions")
         yield Label(self._format_time(), id="pomo-timer", classes="kana-large")
         yield Label("READY", id="pomo-phase", classes="kana-sub")
         yield Label("", id="pomo-quote", classes="kana-mean")
@@ -78,6 +93,7 @@ class Pomodoro(Static):
 
     def on_mount(self) -> None:
         self._show_quote()
+        self._update_session_display()
         self.set_interval(300, self._change_quote)
 
     def _change_quote(self) -> None:
@@ -92,6 +108,12 @@ class Pomodoro(Static):
         author, quote = self._current_quote
         self.query_one("#pomo-quote", Label).update(f'"{quote}"')
         self.query_one("#pomo-author", Label).update(f"— {author}")
+
+    def _update_session_display(self) -> None:
+        pips = "●" * self._sessions_today + "○" * max(0, 4 - self._sessions_today)
+        self.query_one("#pomo-sessions", Label).update(
+            f"Sessions: {pips} ({self._sessions_today} today)"
+        )
 
     def _update_display(self) -> None:
         self.query_one("#pomo-timer", Label).update(self._format_time())
@@ -116,15 +138,27 @@ class Pomodoro(Static):
             self._timer = None
 
         if self._phase == WORK:
+            self._sessions_today += 1
+            self._update_session_display()
+            add_xp(XP_POMODORO_COMPLETE, "pomodoro")
+            # Refresh XP bar
+            try:
+                xp_bar = self.app.query_one("XPBar")
+                xp_bar.refresh_xp()
+            except Exception:
+                pass
+
             self._phase = BREAK
             self._seconds_left = BREAK_MINUTES * 60
             self._change_quote()
-            self.app.notify("Break time! 🌸", title="Pomodoro")
+            self.app.notify(f"Session #{self._sessions_today} complete! +{XP_POMODORO_COMPLETE} XP. Break time!", title="Pomodoro")
+            _send_macos_notification("Pomodoro Complete!", f"Session #{self._sessions_today} done. Take a break!")
         elif self._phase == BREAK:
             self._phase = WORK
             self._seconds_left = WORK_MINUTES * 60
             self._change_quote()
             self.app.notify("Focus time! ⚔️", title="Pomodoro")
+            _send_macos_notification("Break Over!", "Time to focus again!")
 
         self._update_display()
         self._timer = self.set_interval(1, self._tick)

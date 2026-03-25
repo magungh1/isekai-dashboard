@@ -2,6 +2,47 @@ Screen {
     background: #0D1117;
 }
 
+/* XP Bar */
+#xp-bar {
+    height: auto;
+    padding: 0 1;
+    background: #0D1117;
+}
+
+#xp-bar-container {
+    height: auto;
+    width: 100%;
+}
+
+#xp-level-label {
+    text-style: bold;
+    color: #ffcc00;
+    width: auto;
+    min-width: 8;
+}
+
+#xp-progress {
+    width: 1fr;
+    margin: 0 1;
+}
+
+#xp-progress Bar {
+    width: 1fr;
+}
+
+#xp-progress .bar--bar {
+    color: #00ffcc;
+}
+
+#xp-progress .bar--complete {
+    color: #ffcc00;
+}
+
+#xp-detail-label {
+    color: #8b949e;
+    width: auto;
+}
+
 #dashboard-grid {
     layout: grid;
     grid-size: 6 2;
@@ -220,6 +261,12 @@ Calendar {
     background: #f85149;
 }
 
+#pomo-sessions {
+    text-align: center;
+    color: #ffcc00;
+    width: 100%;
+}
+
 /* Pomodoro timer */
 #pomo-timer {
     text-align: center;
@@ -265,5 +312,12 @@ NowPlaying {
     color: #0D1117;
     border: none;
     text-style: bold;
+}
+
+/* SRS Stats */
+#srs-stats-content {
+    color: #e6edf3;
+    width: 100%;
+    height: auto;
 }
 

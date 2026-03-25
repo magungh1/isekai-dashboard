@@ -4,8 +4,10 @@ from textual.widgets import Static, Label
 from textual.binding import Binding
 
 from services.english_srs_service import get_due_cards, review_card, save_mnemonic, get_stats
+from services.xp_service import add_xp, XP_SRS_REVIEW
 from clients.llm_client import generate_english_mnemonic
 from core.models import VocabCard
+from ui.widgets.srs_utils import level_badge, progress_bar_text
 
 FRONT = 0
 BACK = 1
@@ -50,9 +52,8 @@ class EnglishVocab(Static):
         self._cards = cards
         self._state = FRONT
 
-        self.query_one("#eng-stats", Label).update(
-            f"Due: {stats['due']} | Mastered: {stats['mastered']}/{stats['total']}"
-        )
+        bar = progress_bar_text(stats['mastered'], stats['total'])
+        self.query_one("#eng-stats", Label).update(f"Due: {stats['due']}  {bar}")
 
         if cards:
             self._show_front(cards[0])
@@ -68,8 +69,8 @@ class EnglishVocab(Static):
         self._current_card = card
         self._state = FRONT
         self.query_one("#eng-word", Label).update(f"  {card.word}  ")
-        level_stars = "⭐" * card.level if card.level > 0 else "🆕"
-        self.query_one("#eng-pos", Label).update(f"({card.part_of_speech}) | Level: {level_stars}")
+        badge = level_badge(card.level)
+        self.query_one("#eng-pos", Label).update(f"({card.part_of_speech})  |  {badge}")
         self.query_one("#eng-definition", Label).update("")
         self.query_one("#eng-example", Label).update("")
         self.query_one("#eng-mnemonic", Label).update("")
@@ -123,6 +124,14 @@ class EnglishVocab(Static):
     @work(thread=True)
     def _rate_card(self, card_id: int, rating: str) -> None:
         review_card(card_id, rating)
+        add_xp(XP_SRS_REVIEW, "srs_english")
         cards = get_due_cards(limit=20)
         stats = get_stats()
         self.app.call_from_thread(self._set_cards, cards, stats)
+        self.app.call_from_thread(self._refresh_xp)
+
+    def _refresh_xp(self) -> None:
+        try:
+            self.app.query_one("XPBar").refresh_xp()
+        except Exception:
+            pass

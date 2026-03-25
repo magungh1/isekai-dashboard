@@ -41,6 +41,7 @@ from ui.widgets.pull_requests import PullRequests
 from ui.widgets.calendar import Calendar
 from ui.widgets.srs_tabs import SRSTabs
 from ui.widgets.now_playing import NowPlaying
+from ui.widgets.xp_bar import XPBar
 
 DB_PATH = 'isekai.db'
 
@@ -51,10 +52,19 @@ class IsekaiDashboard(App):
 
     BINDINGS = [
         ("q", "quit", "Quit"),
+        ("f1", "focus_widget(0)", "Quests"),
+        ("f2", "focus_widget(1)", "Pomodoro"),
+        ("f3", "focus_widget(2)", "PRs"),
+        ("f4", "focus_widget(3)", "Calendar"),
+        ("f5", "focus_widget(4)", "SRS"),
+        ("f6", "focus_widget(5)", "Music"),
     ]
+
+    _widget_classes = [DailyQuests, Pomodoro, PullRequests, Calendar, SRSTabs, NowPlaying]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
+        yield XPBar(id="xp-bar")
         with Grid(id="dashboard-grid"):
             yield DailyQuests(classes="tool-widget")
             yield Pomodoro(classes="tool-widget")
@@ -63,6 +73,11 @@ class IsekaiDashboard(App):
             yield SRSTabs(classes="tool-widget")
             yield NowPlaying(classes="tool-widget")
         yield Footer()
+
+    def action_focus_widget(self, index: int) -> None:
+        widgets = self.query(".tool-widget")
+        if 0 <= index < len(widgets):
+            widgets[index].focus()
 
     def on_mount(self) -> None:
         if not os.path.exists(DB_PATH):

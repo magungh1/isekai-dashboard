@@ -9,6 +9,7 @@ from services.quests_service import (
     get_quests_by_category, add_quest, toggle_quest, delete_quest,
     reset_daily_quests, reset_weekly_quests,
 )
+from services.xp_service import add_xp, XP_QUEST_COMPLETE
 from core.models import Quest
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,14 @@ class QuestTab(Container):
             self._toggle_quest(event.item.quest.id)
 
     def _toggle_quest(self, quest_id: int) -> None:
-        toggle_quest(quest_id)
+        quest = toggle_quest(quest_id)
+        if quest.is_done:
+            add_xp(XP_QUEST_COMPLETE, "quest")
+            try:
+                xp_bar = self.app.query_one("XPBar")
+                xp_bar.refresh_xp()
+            except Exception:
+                pass
         self._deferred_load()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
