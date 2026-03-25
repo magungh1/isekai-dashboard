@@ -13,6 +13,12 @@ build/
 # Database (local state)
 isekai.db
 
+# Environment secrets
+.env
+
+# Logs
+isekai.log
+
 # IDE
 .idea/
 .vscode/

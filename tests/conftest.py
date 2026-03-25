@@ -25,7 +25,15 @@ def use_temp_db(tmp_path):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             status TEXT DEFAULT 'pending',
+            category TEXT DEFAULT 'daily',
+            deadline TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY,
+            value TEXT
         )
     ''')
     conn.execute('''
@@ -47,6 +55,18 @@ def use_temp_db(tmp_path):
             example TEXT,
             mnemonic TEXT,
             part_of_speech TEXT DEFAULT 'noun',
+            level INTEGER DEFAULT 0,
+            next_review TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kanji_srs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kanji TEXT NOT NULL UNIQUE,
+            kun_reading TEXT,
+            on_reading TEXT,
+            meaning TEXT NOT NULL,
+            mnemonic TEXT,
             level INTEGER DEFAULT 0,
             next_review TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )

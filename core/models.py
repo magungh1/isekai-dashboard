@@ -8,6 +8,8 @@ class Quest:
     title: str
     status: str  # 'pending' or 'done'
     created_at: str
+    category: str = 'daily'  # 'daily', 'weekly', 'goals'
+    deadline: str | None = None
 
     @property
     def is_done(self) -> bool:
@@ -23,6 +25,18 @@ class KanaCard:
     level: int
     next_review: str
     type: str = 'katakana'
+
+
+@dataclass
+class KanjiCard:
+    id: int
+    kanji: str
+    kun_reading: str | None
+    on_reading: str | None
+    meaning: str
+    mnemonic: str | None
+    level: int
+    next_review: str
 
 
 @dataclass

@@ -1,8 +1,25 @@
+import webbrowser
+
 from textual import work
 from textual.app import ComposeResult
 from textual.widgets import Static, Label, ListView, ListItem
 
 from clients.calendar_client import fetch_today_events
+
+
+class CalendarItem(ListItem):
+    """A single calendar event that may have a meeting link."""
+
+    def __init__(self, event: dict) -> None:
+        super().__init__()
+        self.event = event
+
+    def compose(self) -> ComposeResult:
+        icon = "🔗" if self.event['url'] else "🔹"
+        title = self.event['title']
+        if self.event['time']:
+            title = f"{title} ({self.event['time']})"
+        yield Label(f"{icon} {title}")
 
 
 class Calendar(Static):
@@ -28,6 +45,10 @@ class Calendar(Static):
                 cal_list.append(ListItem(Label("✨ No meetings today. 自由！", classes="pr-merged")))
             else:
                 for event in events:
-                    cal_list.append(ListItem(Label(f"🔹 {event}")))
+                    cal_list.append(CalendarItem(event))
 
         self.app.call_from_thread(update_ui)
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if isinstance(event.item, CalendarItem) and event.item.event.get('url'):
+            webbrowser.open(event.item.event['url'])

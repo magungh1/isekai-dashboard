@@ -25,63 +25,72 @@ class KanaOfTheDay(Static):
 
     can_focus = True
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, kana_type: str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
+        self._kana_type = kana_type
+        self._prefix = kana_type or "kana"
         self._current_card: KanaCardModel | None = None
         self._state = FRONT
         self._cards: list[KanaCardModel] = []
 
+    def _q(self, suffix: str) -> Label:
+        return self.query_one(f"#{self._prefix}-{suffix}", Label)
+
     def compose(self) -> ComposeResult:
-        yield Label("🌸 [ 語彙集 ] KANA OF THE DAY", classes="widget-title")
-        yield Label("", id="kana-stats", classes="kana-sub")
-        yield Label("Loading...", id="kana-word", classes="kana-large")
-        yield Label("", id="kana-alt", classes="kana-mean")
-        yield Label("", id="kana-romaji", classes="kana-sub")
-        yield Label("", id="kana-meaning", classes="kana-mean")
-        yield Label("", id="kana-mnemonic", classes="kana-sub")
-        yield Label("space: Flip", id="kana-actions", classes="kana-sub")
+        p = self._prefix
+        if self._kana_type == "katakana":
+            title = "カタカナ KATAKANA"
+        elif self._kana_type == "hiragana":
+            title = "ひらがな HIRAGANA"
+        else:
+            title = "🌸 KANA OF THE DAY"
+        yield Label(title, classes="widget-title")
+        yield Label("", id=f"{p}-stats", classes="kana-sub")
+        yield Label("Loading...", id=f"{p}-word", classes="kana-large")
+        yield Label("", id=f"{p}-alt", classes="kana-mean")
+        yield Label("", id=f"{p}-romaji", classes="kana-sub")
+        yield Label("", id=f"{p}-meaning", classes="kana-mean")
+        yield Label("", id=f"{p}-mnemonic", classes="kana-sub")
+        yield Label("space: Flip", id=f"{p}-actions", classes="kana-sub")
 
     def on_mount(self) -> None:
         self.load_cards()
 
     @work(thread=True)
     def load_cards(self) -> None:
-        cards = get_due_cards(limit=20)
-        stats = get_stats()
+        cards = get_due_cards(limit=20, kana_type=self._kana_type)
+        stats = get_stats(kana_type=self._kana_type)
         self.app.call_from_thread(self._set_cards, cards, stats)
 
     def _set_cards(self, cards: list[KanaCardModel], stats: dict) -> None:
         self._cards = cards
         self._state = FRONT
 
-        stats_label = self.query_one("#kana-stats", Label)
-        stats_label.update(f"Due: {stats['due']} | Mastered: {stats['mastered']}/{stats['total']}")
+        self._q("stats").update(f"Due: {stats['due']} | Mastered: {stats['mastered']}/{stats['total']}")
 
         if cards:
             self._show_front(cards[0])
         else:
-            self.query_one("#kana-word", Label).update("✨ All caught up!")
-            self.query_one("#kana-alt", Label).update("")
-            self.query_one("#kana-romaji", Label).update("No cards due for review.")
-            self.query_one("#kana-meaning", Label).update("")
-            self.query_one("#kana-mnemonic", Label).update("")
-            self.query_one("#kana-actions", Label).update("")
+            self._q("word").update("✨ All caught up!")
+            self._q("alt").update("")
+            self._q("romaji").update("No cards due for review.")
+            self._q("meaning").update("")
+            self._q("mnemonic").update("")
+            self._q("actions").update("")
 
     def _show_front(self, card: KanaCardModel) -> None:
-        """State 0: Show only the kana word."""
         self._current_card = card
         self._state = FRONT
-        self.query_one("#kana-word", Label).update(f"  {card.word}  ")
-        self.query_one("#kana-alt", Label).update("")
+        self._q("word").update(f"  {card.word}  ")
+        self._q("alt").update("")
         level_stars = "⭐" * card.level if card.level > 0 else "🆕"
         tag = "カタカナ" if card.type == "katakana" else "ひらがな"
-        self.query_one("#kana-romaji", Label).update(f"{tag} | Level: {level_stars}")
-        self.query_one("#kana-meaning", Label).update("")
-        self.query_one("#kana-mnemonic", Label).update("")
-        self.query_one("#kana-actions", Label).update("space: Show Romaji")
+        self._q("romaji").update(f"{tag} | Level: {level_stars}")
+        self._q("meaning").update("")
+        self._q("mnemonic").update("")
+        self._q("actions").update("space: Show Romaji")
 
     def _show_romaji(self) -> None:
-        """State 1: Reveal romaji and the alternate script (katakana↔hiragana)."""
         card = self._current_card
         if not card:
             return
@@ -93,25 +102,24 @@ class KanaOfTheDay(Static):
         else:
             alt = to_katakana(card.word)
             alt_label = f"カタカナ: {alt}"
-        self.query_one("#kana-alt", Label).update(alt_label)
-        self.query_one("#kana-romaji", Label).update(f"({romaji})")
-        self.query_one("#kana-actions", Label).update("space: Show Meaning")
+        self._q("alt").update(alt_label)
+        self._q("romaji").update(f"({romaji})")
+        self._q("actions").update("space: Show Meaning")
 
     def _show_back(self) -> None:
-        """State 2: Reveal meaning, mnemonic, and rating buttons."""
         card = self._current_card
         if not card:
             return
         self._state = BACK
-        self.query_one("#kana-meaning", Label).update(f"Meaning: {card.meaning}")
+        self._q("meaning").update(f"Meaning: {card.meaning}")
 
         if card.mnemonic:
-            self.query_one("#kana-mnemonic", Label).update(f"💡 {card.mnemonic}")
+            self._q("mnemonic").update(f"💡 {card.mnemonic}")
         else:
-            self.query_one("#kana-mnemonic", Label).update("🔄 Fetching mnemonic...")
+            self._q("mnemonic").update("🔄 Fetching mnemonic...")
             self._fetch_mnemonic(card.id, card.word, card.meaning)
 
-        self.query_one("#kana-actions", Label).update("1=Miss  2=Good")
+        self._q("actions").update("1=Miss  2=Good")
 
     @work(thread=True)
     def _fetch_mnemonic(self, card_id: int, word: str, meaning: str) -> None:
@@ -119,11 +127,11 @@ class KanaOfTheDay(Static):
         if mnemonic:
             save_mnemonic(card_id, mnemonic)
             self.app.call_from_thread(
-                lambda: self.query_one("#kana-mnemonic", Label).update(f"💡 {mnemonic}")
+                lambda: self._q("mnemonic").update(f"💡 {mnemonic}")
             )
         else:
             self.app.call_from_thread(
-                lambda: self.query_one("#kana-mnemonic", Label).update("(No API key set)")
+                lambda: self._q("mnemonic").update("(No API key set)")
             )
 
     def action_flip_card(self) -> None:
@@ -145,6 +153,6 @@ class KanaOfTheDay(Static):
     @work(thread=True)
     def _rate_card(self, card_id: int, rating: str) -> None:
         review_card(card_id, rating)
-        cards = get_due_cards(limit=20)
-        stats = get_stats()
+        cards = get_due_cards(limit=20, kana_type=self._kana_type)
+        stats = get_stats(kana_type=self._kana_type)
         self.app.call_from_thread(self._set_cards, cards, stats)

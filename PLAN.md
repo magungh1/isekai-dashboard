@@ -100,7 +100,7 @@ isekai-dashboard/
 
 - [x] **Phase 1: Database Setup.** Write the DB initialization script, define the schema, and migrate data from `vocab_katakana.json` into the `kana_srs` SQLite table.
 - [ ] **Phase 1.5: Structural Refactor.** Break `main.py` down into the `core/`, `services/`, `clients/`, and `ui/` module structure before adding new features.
-- [ ] **Phase 2: Quest Module Overhaul.** Rewrite the `DailyQuests` class to use Textual's `ListView` and `Input`, directly linked to DB queries via `quests_service.py`.
+- [x] **Phase 2: Quest Module Overhaul.** Rewrite the `DailyQuests` class to use Textual's `ListView` and `Input`, directly linked to DB queries via `quests_service.py`.
 - [ ] **Phase 3: OpenRouter API Integration.** Add the `openai` dependency via `uv`. Create `llm_client.py` to fetch mnemonics using a free OpenRouter model, handling errors gracefully.
 - [ ] **Phase 4: Kana SRS Module Overhaul.** Rewrite the `KanaOfTheDay` widget to implement the "Flip" state machine, integrate the LLM mnemonic fetcher, and handle the spaced repetition logic (calculating `next_review` timestamps).
 - [ ] **Phase 5: UX Polish.** Add `webbrowser` hooks for GitHub PRs, convert the PR and Calendar widgets to use `ListView`, refine the CSS styling (moving to `styles.tcss`), and ensure keyboard navigation works seamlessly across the grid.

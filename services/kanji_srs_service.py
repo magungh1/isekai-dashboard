@@ -2,9 +2,9 @@ import random
 from datetime import datetime, timedelta
 
 from core.db import get_shared_connection, db_lock
-from core.models import VocabCard
+from core.models import KanjiCard
 
-# Same SRS intervals as kana
+# SRS intervals in hours per level
 SRS_INTERVALS = {
     0: 0,       # new — review immediately
     1: 4,       # 4 hours
@@ -15,26 +15,26 @@ SRS_INTERVALS = {
 }
 
 
-def get_due_cards(limit: int = 10) -> list[VocabCard]:
+def get_due_cards(limit: int = 10) -> list[KanjiCard]:
     with db_lock:
         conn = get_shared_connection()
         now = datetime.now().isoformat()
         rows = conn.execute(
-            'SELECT * FROM english_srs WHERE next_review <= ? ORDER BY level ASC, next_review ASC LIMIT ?',
+            'SELECT * FROM kanji_srs WHERE next_review <= ? ORDER BY level ASC, next_review ASC LIMIT ?',
             (now, limit)
         ).fetchall()
-        cards = [VocabCard(**dict(row)) for row in rows]
+        cards = [KanjiCard(**dict(row)) for row in rows]
         random.shuffle(cards)
         return cards
 
 
-def get_card_by_id(card_id: int) -> VocabCard | None:
+def get_card_by_id(card_id: int) -> KanjiCard | None:
     conn = get_shared_connection()
-    row = conn.execute('SELECT * FROM english_srs WHERE id = ?', (card_id,)).fetchone()
-    return VocabCard(**dict(row)) if row else None
+    row = conn.execute('SELECT * FROM kanji_srs WHERE id = ?', (card_id,)).fetchone()
+    return KanjiCard(**dict(row)) if row else None
 
 
-def review_card(card_id: int, rating: str) -> VocabCard:
+def review_card(card_id: int, rating: str) -> KanjiCard:
     with db_lock:
         conn = get_shared_connection()
         card = get_card_by_id(card_id)
@@ -48,7 +48,7 @@ def review_card(card_id: int, rating: str) -> VocabCard:
         next_review = (datetime.now() + timedelta(hours=interval_hours)).isoformat()
 
         conn.execute(
-            'UPDATE english_srs SET level = ?, next_review = ? WHERE id = ?',
+            'UPDATE kanji_srs SET level = ?, next_review = ? WHERE id = ?',
             (new_level, next_review, card_id)
         )
         conn.commit()
@@ -58,15 +58,15 @@ def review_card(card_id: int, rating: str) -> VocabCard:
 def save_mnemonic(card_id: int, mnemonic: str) -> None:
     with db_lock:
         conn = get_shared_connection()
-        conn.execute('UPDATE english_srs SET mnemonic = ? WHERE id = ?', (mnemonic, card_id))
+        conn.execute('UPDATE kanji_srs SET mnemonic = ? WHERE id = ?', (mnemonic, card_id))
         conn.commit()
 
 
 def get_stats() -> dict:
     with db_lock:
         conn = get_shared_connection()
-        total = conn.execute('SELECT COUNT(*) FROM english_srs').fetchone()[0]
+        total = conn.execute('SELECT COUNT(*) FROM kanji_srs').fetchone()[0]
         now = datetime.now().isoformat()
-        due = conn.execute('SELECT COUNT(*) FROM english_srs WHERE next_review <= ?', (now,)).fetchone()[0]
-        mastered = conn.execute('SELECT COUNT(*) FROM english_srs WHERE level >= 4').fetchone()[0]
+        due = conn.execute('SELECT COUNT(*) FROM kanji_srs WHERE next_review <= ?', (now,)).fetchone()[0]
+        mastered = conn.execute('SELECT COUNT(*) FROM kanji_srs WHERE level >= 4').fetchone()[0]
         return {'total': total, 'due': due, 'mastered': mastered}

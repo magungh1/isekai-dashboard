@@ -4,11 +4,21 @@ Screen {
 
 #dashboard-grid {
     layout: grid;
-    grid-size: 2 2;
-    grid-columns: 1fr 1fr;
+    grid-size: 6 2;
+    grid-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
     grid-rows: 1fr 1fr;
     padding: 1;
 }
+
+/* Top row: 3 widgets each spanning 2 columns */
+DailyQuests { column-span: 2; }
+Pomodoro { column-span: 2; }
+PullRequests { column-span: 2; }
+
+/* Bottom row: 3 widgets each spanning 2 columns */
+Calendar { column-span: 2; }
+SRSTabs { column-span: 2; }
+NowPlaying { column-span: 2; }
 
 .tool-widget {
     border: tall #00ffcc;
@@ -37,7 +47,7 @@ Screen {
 }
 
 .quest-pending {
-    color: #c9d1d9;
+    color: #e6edf3;
 }
 
 .pr-merged {
@@ -59,25 +69,38 @@ Screen {
 }
 
 .kana-sub {
-    color: #8b949e;
+    color: #b1bac4;
     width: 100%;
 }
 
 .kana-mean {
     margin-top: 1;
-    color: #c9d1d9;
+    color: #e6edf3;
     width: 100%;
 }
 
-#quest-input {
-    dock: bottom;
+.quest-input {
     margin-top: 1;
     background: #0d1117;
     border: tall #00ffcc 50%;
-    color: #c9d1d9;
+    color: #e6edf3;
 }
 
-#quest-list, #pr-list, #cal-list {
+#quest-tabs {
+    height: 100%;
+}
+
+QuestTab {
+    height: 100%;
+    layout: vertical;
+}
+
+.quest-list {
+    max-height: 12;
+    height: auto;
+}
+
+#pr-list, #cal-list {
     height: 1fr;
 }
 
@@ -88,6 +111,25 @@ ListView > ListItem {
 
 ListView > ListItem > Label {
     width: 100%;
+}
+
+QuestItem Horizontal {
+    height: auto;
+    width: 100%;
+}
+
+QuestItem Horizontal Label {
+    width: 1fr;
+}
+
+.quest-delete-btn {
+    dock: right;
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    background: #f85149;
+    color: #ffffff;
+    border: none;
 }
 
 ListView > ListItem:hover {
@@ -123,6 +165,7 @@ Tab:hover {
 
 TabPane {
     padding: 0;
+    height: 1fr;
 }
 
 ContentSwitcher {
@@ -139,12 +182,88 @@ Calendar {
 }
 
 /* SRS card word centering */
-#kana-word, #eng-word {
+#katakana-word, #hiragana-word, #kana-word, #eng-word, #kanji-char {
     text-align: center;
     padding: 1 0;
 }
 
-#kana-actions, #eng-actions {
+#katakana-actions, #hiragana-actions, #kana-actions, #eng-actions, #kanji-actions {
     margin-top: 1;
     color: #58a6ff;
 }
+
+#pomo-actions {
+    margin-top: 1;
+    height: auto;
+    width: 100%;
+}
+
+#pomo-start-btn {
+    width: 1fr;
+    background: #238636;
+    color: #ffffff;
+    border: none;
+}
+
+#pomo-start-btn:hover {
+    background: #2ea043;
+}
+
+#pomo-reset-btn {
+    width: 1fr;
+    background: #da3633;
+    color: #ffffff;
+    border: none;
+}
+
+#pomo-reset-btn:hover {
+    background: #f85149;
+}
+
+/* Pomodoro timer */
+#pomo-timer {
+    text-align: center;
+    text-style: bold;
+    color: #ff6b6b;
+    padding: 1 0;
+    width: 100%;
+}
+
+#pomo-phase {
+    text-align: center;
+    width: 100%;
+}
+
+#pomo-quote {
+    text-style: italic;
+    color: #b1bac4;
+    margin-top: 1;
+    width: 100%;
+}
+
+#pomo-author {
+    color: #58a6ff;
+    width: 100%;
+}
+
+NowPlaying {
+    background: #1c1c1c;
+}
+
+.np-track-text {
+    text-align: center;
+    text-style: bold;
+    color: #ffcc00;
+    margin-top: 1;
+    height: auto;
+}
+
+#np-toggle {
+    margin-top: 1;
+    width: 100%;
+    background: #00ffcc;
+    color: #0D1117;
+    border: none;
+    text-style: bold;
+}
+
