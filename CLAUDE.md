@@ -15,10 +15,10 @@ See `make help` for all available commands.
 
 ## Features
 
-- **Daily Quests** — To-do list with categories (daily/weekly/goals), persisted in SQLite. Daily quests auto-reset each day.
-- **XP / Level System** — Earn XP from quests (+10), SRS reviews (+5), and pomodoro sessions (+25). Level progress bar shown below header.
+- **Daily Quests** — To-do list with categories (daily/weekly/goals), color-coded by category, persisted in SQLite. Daily quests auto-reset each day.
+- **XP / Level System** — Earn XP from quests (+10), SRS reviews (+5), and pomodoro sessions (+25). Level progress bar shown below header. Includes daily streak tracker.
 - **Keyboard Navigation** — F1-F6 to jump between widgets.
-- **Pomodoro Timer** — 25min work / 5min break with FGO motivational quotes. Tracks daily sessions, awards XP, sends macOS notifications on completion.
+- **Pomodoro Timer** — Customizable durations (25/5, 50/10, 15/3 presets) with FGO motivational quotes. Tracks daily sessions, awards XP, sends macOS notifications on completion.
 - **SRS Flashcards** — Tabbed widget with 5 tabs:
   - **Katakana** — 3-state flip (kana → romaji + alternate script → meaning + mnemonic)
   - **Hiragana** — Same 3-state flip, 190+ native Japanese words
@@ -26,6 +26,7 @@ See `make help` for all available commands.
   - **Kanji** — 2-state flip (kanji → readings + meaning + mnemonic), JLPT N5/N4
   - **Stats** — Overview of all SRS decks: level distribution, due counts, forecast
   - SRS intervals: New → 4h → 1d → 3d → 1w → 1mo
+  - 4-level grading: Again (reset) / Hard (stay) / Good (+1) / Easy (+2)
   - Color-coded level badges and progress bars on each card
 - **Pull Requests** — Fetches open PRs via `gh` CLI, opens in browser on Enter.
 - **Calendar** — Today's macOS calendar events via `icalBuddy`, with meeting link support.

@@ -16,7 +16,7 @@ Screen {
 
 #xp-level-label {
     text-style: bold;
-    color: #ffcc00;
+    color: #ffd700;
     width: auto;
     min-width: 8;
 }
@@ -31,16 +31,23 @@ Screen {
 }
 
 #xp-progress .bar--bar {
-    color: #00ffcc;
+    color: #ffd700;
 }
 
 #xp-progress .bar--complete {
-    color: #ffcc00;
+    color: #ff9500;
 }
 
 #xp-detail-label {
-    color: #8b949e;
+    color: #e6edf3;
     width: auto;
+}
+
+#xp-streak-label {
+    text-style: bold;
+    color: #ff6b35;
+    width: auto;
+    margin-right: 1;
 }
 
 #dashboard-grid {
@@ -76,7 +83,7 @@ NowPlaying { column-span: 2; }
 
 .widget-title {
     text-style: bold;
-    color: #ff00ff;
+    color: #e8a0bf;
     border-bottom: solid #00ffcc 30%;
     margin-bottom: 1;
     width: 100%;
@@ -91,12 +98,33 @@ NowPlaying { column-span: 2; }
     color: #e6edf3;
 }
 
+/* Quest category color coding */
+.quest-cat-daily {
+    color: #58a6ff;
+}
+
+.quest-cat-weekly {
+    color: #a5d6ff;
+}
+
+.quest-cat-goals {
+    color: #f0883e;
+}
+
+.quest-done.quest-cat-daily,
+.quest-done.quest-cat-weekly,
+.quest-done.quest-cat-goals {
+    color: #8b949e;
+    text-style: strike;
+}
+
 .pr-merged {
     color: #2ea043;
 }
 
 .pr-review {
     color: #d29922;
+    text-overflow: ellipsis;
 }
 
 .pr-failed {
@@ -145,6 +173,14 @@ QuestTab {
     height: 1fr;
 }
 
+#cal-list ListItem {
+    padding: 1 0;
+}
+
+#cal-list Label {
+    text-style: bold;
+}
+
 ListView > ListItem {
     background: transparent;
     padding: 0 1;
@@ -191,13 +227,14 @@ TabbedContent {
 }
 
 Tab {
-    color: #8b949e;
+    color: #6e7681;
     background: #161b22;
 }
 
 Tab.-active {
-    color: #ff00ff;
-    background: #161b22;
+    color: #ffd700;
+    text-style: bold;
+    background: #1c2333;
 }
 
 Tab:hover {
@@ -225,7 +262,11 @@ Calendar {
 /* SRS card word centering */
 #katakana-word, #hiragana-word, #kana-word, #eng-word, #kanji-char {
     text-align: center;
-    padding: 1 0;
+    padding: 2 2;
+    background: #1c2333;
+    margin: 1 4;
+    text-style: bold;
+    color: #7dcfff;
 }
 
 #katakana-actions, #hiragana-actions, #kana-actions, #eng-actions, #kanji-actions {
@@ -261,9 +302,33 @@ Calendar {
     background: #f85149;
 }
 
+#pomo-presets {
+    margin-top: 1;
+    height: auto;
+    width: 100%;
+}
+
+.pomo-preset-btn {
+    width: 1fr;
+    background: #30363d;
+    color: #e6edf3;
+    border: none;
+    min-width: 6;
+}
+
+.pomo-preset-btn:hover {
+    background: #484f58;
+}
+
+#pomo-preset-label {
+    text-align: center;
+    color: #8b949e;
+    width: 100%;
+}
+
 #pomo-sessions {
     text-align: center;
-    color: #ffcc00;
+    color: #c9b1ff;
     width: 100%;
 }
 
@@ -271,7 +336,7 @@ Calendar {
 #pomo-timer {
     text-align: center;
     text-style: bold;
-    color: #ff6b6b;
+    color: #ffb7c5;
     padding: 1 0;
     width: 100%;
 }
@@ -283,13 +348,17 @@ Calendar {
 
 #pomo-quote {
     text-style: italic;
-    color: #b1bac4;
+    color: #9b8ea8;
     margin-top: 1;
+    padding: 0 0 0 2;
+    border-left: tall #c9b1ff 40%;
     width: 100%;
 }
 
 #pomo-author {
-    color: #58a6ff;
+    color: #c9b1ff;
+    padding: 0 0 0 2;
+    border-left: tall #c9b1ff 40%;
     width: 100%;
 }
 
@@ -300,7 +369,7 @@ NowPlaying {
 .np-track-text {
     text-align: center;
     text-style: bold;
-    color: #ffcc00;
+    color: #ffb7c5;
     margin-top: 1;
     height: auto;
 }
