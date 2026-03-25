@@ -13,6 +13,7 @@ class XPBar(Static):
         with Horizontal(id="xp-bar-container"):
             yield Label("", id="xp-level-label")
             yield ProgressBar(id="xp-progress", total=100, show_eta=False, show_percentage=False)
+            yield Label("", id="xp-streak-label")
             yield Label("", id="xp-detail-label")
 
     def on_mount(self) -> None:
@@ -30,6 +31,7 @@ class XPBar(Static):
         xp_needed = info['xp_needed']
         today = info['today_xp']
         total = info['total_xp']
+        streak = info.get('streak', 0)
 
         self.query_one("#xp-level-label", Label).update(
             f" Lv.{level} "
@@ -38,6 +40,9 @@ class XPBar(Static):
         progress = self.query_one("#xp-progress", ProgressBar)
         progress.total = max(xp_needed, 1)
         progress.progress = xp_in
+
+        streak_text = f" {streak}-day streak " if streak > 0 else ""
+        self.query_one("#xp-streak-label", Label).update(streak_text)
 
         self.query_one("#xp-detail-label", Label).update(
             f" {xp_in}/{xp_needed} XP  |  Today: +{today}  |  Total: {total} "

@@ -14,7 +14,11 @@ class PRItem(ListItem):
 
     def compose(self) -> ComposeResult:
         repo_name = self.pr['repository']['name']
-        yield Label(f"🟡 \\[#{self.pr['number']}] {self.pr['title']} ({repo_name})", classes="pr-review")
+        title = self.pr['title']
+        max_len = 45
+        if len(title) > max_len:
+            title = title[:max_len - 1] + "…"
+        yield Label(f"  🟡 \\[#{self.pr['number']}] {title} ({repo_name})", classes="pr-review")
 
 
 class PullRequests(Static):

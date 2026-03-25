@@ -18,8 +18,10 @@ class EnglishVocab(Static):
 
     BINDINGS = [
         Binding("space", "flip_card", "Flip Card", show=True),
-        Binding("1", "rate_miss", "Miss", show=False),
-        Binding("2", "rate_good", "Good", show=False),
+        Binding("1", "rate_again", "Again", show=False),
+        Binding("2", "rate_hard", "Hard", show=False),
+        Binding("3", "rate_good", "Good", show=False),
+        Binding("4", "rate_easy", "Easy", show=False),
     ]
 
     can_focus = True
@@ -92,7 +94,7 @@ class EnglishVocab(Static):
             self.query_one("#eng-mnemonic", Label).update("🔄 Fetching mnemonic...")
             self._fetch_mnemonic(card.id, card.word, card.definition)
 
-        self.query_one("#eng-actions", Label).update("1=Miss  2=Good")
+        self.query_one("#eng-actions", Label).update("1=Again  2=Hard  3=Good  4=Easy")
 
     @work(thread=True)
     def _fetch_mnemonic(self, card_id: int, word: str, definition: str) -> None:
@@ -113,13 +115,21 @@ class EnglishVocab(Static):
         if self._state == FRONT:
             self._show_back()
 
-    def action_rate_miss(self) -> None:
+    def action_rate_again(self) -> None:
         if self._state == BACK and self._current_card:
-            self._rate_card(self._current_card.id, 'miss')
+            self._rate_card(self._current_card.id, 'again')
+
+    def action_rate_hard(self) -> None:
+        if self._state == BACK and self._current_card:
+            self._rate_card(self._current_card.id, 'hard')
 
     def action_rate_good(self) -> None:
         if self._state == BACK and self._current_card:
             self._rate_card(self._current_card.id, 'good')
+
+    def action_rate_easy(self) -> None:
+        if self._state == BACK and self._current_card:
+            self._rate_card(self._current_card.id, 'easy')
 
     @work(thread=True)
     def _rate_card(self, card_id: int, rating: str) -> None:

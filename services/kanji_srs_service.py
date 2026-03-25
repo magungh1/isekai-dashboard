@@ -35,14 +35,20 @@ def get_card_by_id(card_id: int) -> KanjiCard | None:
 
 
 def review_card(card_id: int, rating: str) -> KanjiCard:
+    """Rate a card: 'again' resets, 'hard' stays, 'good' +1, 'easy' +2."""
     with db_lock:
         conn = get_shared_connection()
         card = get_card_by_id(card_id)
+        max_level = max(SRS_INTERVALS.keys())
 
-        if rating == 'miss':
+        if rating in ('miss', 'again'):
             new_level = 0
-        else:
-            new_level = min(card.level + 1, max(SRS_INTERVALS.keys()))
+        elif rating == 'hard':
+            new_level = card.level
+        elif rating == 'easy':
+            new_level = min(card.level + 2, max_level)
+        else:  # good
+            new_level = min(card.level + 1, max_level)
 
         interval_hours = SRS_INTERVALS.get(new_level, 720)
         next_review = (datetime.now() + timedelta(hours=interval_hours)).isoformat()

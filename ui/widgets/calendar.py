@@ -26,7 +26,7 @@ class Calendar(Static):
     """Fetches live events from macOS Calendar via icalBuddy."""
 
     def compose(self) -> ComposeResult:
-        yield Label("⏳ [ 予定表 ] TEMPORAL LOG", classes="widget-title")
+        yield Label("⏳ [ 予定表 ] CALENDAR", classes="widget-title")
         yield ListView(id="cal-list")
 
     def on_mount(self) -> None:

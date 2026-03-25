@@ -16,6 +16,12 @@ BREAK = "break"
 WORK_MINUTES = 25
 BREAK_MINUTES = 5
 
+POMO_PRESETS = [
+    (25, 5, "25/5"),
+    (50, 10, "50/10"),
+    (15, 3, "15/3"),
+]
+
 FGO_QUOTES = [
     ("King Hassan",
      "The bell of evening tolls thy name. Touch not the sky, for by heaven's will I shall strip thee of thy wings!"),
@@ -75,26 +81,39 @@ class Pomodoro(Static):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._phase = IDLE
+        self._work_minutes = WORK_MINUTES
+        self._break_minutes = BREAK_MINUTES
         self._seconds_left = WORK_MINUTES * 60
         self._timer: Timer | None = None
         self._current_quote = random.choice(FGO_QUOTES)
         self._sessions_today = 0
+        self._preset_index = 0
 
     def compose(self) -> ComposeResult:
         yield Label("⏱ [ 修行 ] POMODORO", classes="widget-title")
         yield Label("", id="pomo-sessions")
         yield Label(self._format_time(), id="pomo-timer", classes="kana-large")
         yield Label("READY", id="pomo-phase", classes="kana-sub")
+        yield Label("", id="pomo-preset-label", classes="kana-sub")
         yield Label("", id="pomo-quote", classes="kana-mean")
         yield Label("", id="pomo-author", classes="kana-sub")
         with Horizontal(id="pomo-actions"):
             yield Button("Start", id="pomo-start-btn", variant="success")
             yield Button("Reset", id="pomo-reset-btn", variant="error")
+        with Horizontal(id="pomo-presets"):
+            for work, brk, label in POMO_PRESETS:
+                yield Button(label, id=f"pomo-preset-{work}-{brk}", classes="pomo-preset-btn")
 
     def on_mount(self) -> None:
         self._show_quote()
         self._update_session_display()
+        self._update_preset_label()
         self.set_interval(300, self._change_quote)
+
+    def _update_preset_label(self) -> None:
+        self.query_one("#pomo-preset-label", Label).update(
+            f"Mode: {self._work_minutes}min work / {self._break_minutes}min break"
+        )
 
     def _change_quote(self) -> None:
         self._current_quote = random.choice(FGO_QUOTES)
@@ -149,13 +168,13 @@ class Pomodoro(Static):
                 pass
 
             self._phase = BREAK
-            self._seconds_left = BREAK_MINUTES * 60
+            self._seconds_left = self._break_minutes * 60
             self._change_quote()
             self.app.notify(f"Session #{self._sessions_today} complete! +{XP_POMODORO_COMPLETE} XP. Break time!", title="Pomodoro")
             _send_macos_notification("Pomodoro Complete!", f"Session #{self._sessions_today} done. Take a break!")
         elif self._phase == BREAK:
             self._phase = WORK
-            self._seconds_left = WORK_MINUTES * 60
+            self._seconds_left = self._work_minutes * 60
             self._change_quote()
             self.app.notify("Focus time! ⚔️", title="Pomodoro")
             _send_macos_notification("Break Over!", "Time to focus again!")
@@ -168,6 +187,10 @@ class Pomodoro(Static):
             self.action_toggle_timer()
         elif event.button.id == "pomo-reset-btn":
             self.action_reset_timer()
+        elif event.button.id and event.button.id.startswith("pomo-preset-"):
+            parts = event.button.id.replace("pomo-preset-", "").split("-")
+            if len(parts) == 2:
+                self._set_duration(int(parts[0]), int(parts[1]))
 
     def action_toggle_timer(self) -> None:
         btn = self.query_one("#pomo-start-btn", Button)
@@ -182,12 +205,21 @@ class Pomodoro(Static):
             self._update_display()
             btn.label = "Pause"
 
+    def _set_duration(self, work: int, brk: int) -> None:
+        if self._phase != IDLE:
+            return
+        self._work_minutes = work
+        self._break_minutes = brk
+        self._seconds_left = work * 60
+        self._update_display()
+        self._update_preset_label()
+
     def action_reset_timer(self) -> None:
         if self._timer:
             self._timer.stop()
             self._timer = None
         self._phase = IDLE
-        self._seconds_left = WORK_MINUTES * 60
+        self._seconds_left = self._work_minutes * 60
         self._change_quote()
         self._update_display()
         self.query_one("#pomo-start-btn", Button).label = "Start"

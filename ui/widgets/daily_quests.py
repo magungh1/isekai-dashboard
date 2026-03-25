@@ -15,6 +15,13 @@ from core.models import Quest
 logger = logging.getLogger(__name__)
 
 
+CATEGORY_COLORS = {
+    'daily': ('📋', 'quest-cat-daily'),
+    'weekly': ('💼', 'quest-cat-weekly'),
+    'goals': ('🎯', 'quest-cat-goals'),
+}
+
+
 class QuestItem(ListItem):
     """A single quest item in the list."""
 
@@ -25,11 +32,12 @@ class QuestItem(ListItem):
     def compose(self) -> ComposeResult:
         prefix = "[x]" if self.quest.is_done else "[ ]"
         css_class = "quest-done" if self.quest.is_done else "quest-pending"
+        cat_icon, cat_css = CATEGORY_COLORS.get(self.quest.category, ('', 'quest-pending'))
         text = f"{prefix} {self.quest.title}"
         if self.quest.deadline:
             text += f"  ({self.quest.deadline})"
         with Horizontal():
-            yield Label(text, classes=css_class)
+            yield Label(text, classes=f"{css_class} {cat_css}")
             yield Button("x", variant="error", classes="quest-delete-btn")
 
 

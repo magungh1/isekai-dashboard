@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from core.db import get_shared_connection, db_lock
 
@@ -63,6 +63,30 @@ def xp_for_level(level: int) -> int:
     return int(LEVEL_BASE * (level ** 1.5))
 
 
+def get_streak() -> int:
+    """Return number of consecutive days with XP activity, ending today or yesterday."""
+    with db_lock:
+        _ensure_xp_table()
+        conn = get_shared_connection()
+        rows = conn.execute(
+            'SELECT DISTINCT created_date FROM xp_log ORDER BY created_date DESC'
+        ).fetchall()
+    if not rows:
+        return 0
+    dates = [date.fromisoformat(r[0]) for r in rows]
+    today = date.today()
+    # Streak must include today or yesterday to be active
+    if dates[0] != today and dates[0] != today - timedelta(days=1):
+        return 0
+    streak = 1
+    for i in range(1, len(dates)):
+        if dates[i - 1] - dates[i] == timedelta(days=1):
+            streak += 1
+        else:
+            break
+    return streak
+
+
 def get_level_info() -> dict:
     """Returns current level, XP within level, and XP needed for next level."""
     total_xp = get_total_xp()
@@ -79,4 +103,5 @@ def get_level_info() -> dict:
         'xp_in_level': xp_in_level,
         'xp_needed': xp_needed,
         'today_xp': get_today_xp(),
+        'streak': get_streak(),
     }
