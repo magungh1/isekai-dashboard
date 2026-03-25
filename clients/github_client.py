@@ -7,7 +7,7 @@ def fetch_open_prs(limit: int = 5) -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--author=@me', '--state=open',
-             '--json', 'title,number,repository,url,createdAt,statusCheckRollup'],
+             '--json', 'title,number,repository,url,createdAt'],
             capture_output=True, text=True, check=True
         )
         prs = json.loads(result.stdout)
@@ -22,7 +22,7 @@ def fetch_review_requested_prs(limit: int = 5) -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--review-requested=@me', '--state=open',
-             '--json', 'title,number,repository,url,createdAt,statusCheckRollup'],
+             '--json', 'title,number,repository,url,createdAt'],
             capture_output=True, text=True, check=True
         )
         prs = json.loads(result.stdout)
