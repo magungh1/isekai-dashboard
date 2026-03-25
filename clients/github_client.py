@@ -1,18 +1,75 @@
 import json
 import subprocess
+from datetime import datetime, timezone
 
 
 def fetch_open_prs(limit: int = 5) -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--author=@me', '--state=open',
-             '--json', 'title,number,repository,url'],
+             '--json', 'title,number,repository,url,createdAt,statusCheckRollup'],
             capture_output=True, text=True, check=True
         )
         prs = json.loads(result.stdout)
+        for pr in prs:
+            pr['_kind'] = 'authored'
         return prs[:limit]
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None
+
+
+def fetch_review_requested_prs(limit: int = 5) -> list[dict] | None:
+    try:
+        result = subprocess.run(
+            ['gh', 'search', 'prs', '--review-requested=@me', '--state=open',
+             '--json', 'title,number,repository,url,createdAt,statusCheckRollup'],
+            capture_output=True, text=True, check=True
+        )
+        prs = json.loads(result.stdout)
+        for pr in prs:
+            pr['_kind'] = 'review_requested'
+        return prs[:limit]
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+
+def approve_pr(repo_fullname: str, number: int) -> bool:
+    try:
+        subprocess.run(
+            ['gh', 'pr', 'review', str(number), '--approve', '-R', repo_fullname],
+            capture_output=True, text=True, check=True
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
+def format_pr_age(created_at: str) -> str:
+    try:
+        created = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        delta = datetime.now(timezone.utc) - created
+        if delta.days > 0:
+            return f"{delta.days}d"
+        hours = delta.seconds // 3600
+        if hours > 0:
+            return f"{hours}h"
+        return f"{delta.seconds // 60}m"
+    except (ValueError, TypeError):
+        return ""
+
+
+def get_ci_status(pr: dict) -> str:
+    checks = pr.get('statusCheckRollup') or []
+    if not checks:
+        return ""
+    states = {c.get('conclusion') or c.get('status', '') for c in checks}
+    if 'FAILURE' in states or 'failure' in states:
+        return "fail"
+    if 'PENDING' in states or 'pending' in states or 'IN_PROGRESS' in states:
+        return "pending"
+    if 'SUCCESS' in states or 'success' in states:
+        return "pass"
+    return ""
 
 
 def open_pr_in_browser(url: str) -> None:

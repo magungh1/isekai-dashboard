@@ -63,6 +63,19 @@ def xp_for_level(level: int) -> int:
     return int(LEVEL_BASE * (level ** 1.5))
 
 
+def get_today_pomodoro_count() -> int:
+    """Return how many pomodoro sessions were completed today."""
+    with db_lock:
+        _ensure_xp_table()
+        conn = get_shared_connection()
+        today = date.today().isoformat()
+        row = conn.execute(
+            "SELECT COUNT(*) FROM xp_log WHERE source = 'pomodoro' AND created_date = ?",
+            (today,)
+        ).fetchone()
+        return row[0]
+
+
 def get_streak() -> int:
     """Return number of consecutive days with XP activity, ending today or yesterday."""
     with db_lock:

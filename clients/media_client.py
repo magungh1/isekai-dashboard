@@ -44,6 +44,40 @@ def get_current_track() -> str | None:
         logger.error(f"Unexpected error in get_current_track: {e}")
         return None
 
+def get_playback_progress() -> tuple[float, float] | None:
+    """Return (current_time, duration) in seconds, or None if unavailable."""
+    browser = get_media_browser()
+
+    script = f"""
+    tell application "{browser}"
+        if not (exists window 1) then return ""
+        repeat with w in windows
+            repeat with t in tabs of w
+                set u to URL of t
+                if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                    set res to execute t javascript "JSON.stringify({{c: document.querySelector('video').currentTime, d: document.querySelector('video').duration}})"
+                    return res
+                end if
+            end repeat
+        end repeat
+        return ""
+    end tell
+    """
+    try:
+        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
+        output = result.stdout.strip()
+        if output and output != "":
+            import json
+            data = json.loads(output)
+            current = float(data.get('c', 0))
+            duration = float(data.get('d', 0))
+            if duration > 0:
+                return (current, duration)
+    except Exception as e:
+        logger.debug(f"Could not get playback progress: {e}")
+    return None
+
+
 def toggle_playback() -> bool:
     """
     Injects JavaScript into the active YouTube/YouTube Music tab to toggle play/pause.
