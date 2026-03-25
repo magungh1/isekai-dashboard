@@ -279,10 +279,40 @@ Calendar {
     color: #58a6ff;
 }
 
-#pomo-actions {
-    margin-top: 1;
+/* Pomodoro single-column layout */
+#pomo-sessions {
+    color: #c9b1ff;
+    width: auto;
+    background: #2d333b;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#pomo-status-row {
     height: auto;
     width: 100%;
+    align: center middle;
+}
+
+#pomo-phase {
+    color: #e6edf3;
+    text-style: bold;
+    width: auto;
+    background: #2d333b;
+    padding: 0 1;
+}
+
+#pomo-timer {
+    text-align: center;
+    text-style: bold;
+    color: #ffb7c5;
+    width: 100%;
+}
+
+#pomo-actions {
+    height: auto;
+    width: 100%;
+    margin-top: 1;
 }
 
 #pomo-start-btn {
@@ -308,7 +338,6 @@ Calendar {
 }
 
 #pomo-presets {
-    margin-top: 1;
     height: auto;
     width: 100%;
 }
@@ -316,39 +345,19 @@ Calendar {
 .pomo-preset-btn {
     width: 1fr;
     background: #30363d;
-    color: #e6edf3;
+    color: #8b949e;
     border: none;
-    min-width: 6;
+    min-width: 5;
 }
 
 .pomo-preset-btn:hover {
     background: #484f58;
 }
 
-#pomo-preset-label {
-    text-align: center;
-    color: #8b949e;
-    width: 100%;
-}
-
-#pomo-sessions {
-    text-align: center;
-    color: #c9b1ff;
-    width: 100%;
-}
-
-/* Pomodoro timer */
-#pomo-timer {
-    text-align: center;
+.pomo-preset-btn.active {
+    background: #7c3aed;
+    color: #ffffff;
     text-style: bold;
-    color: #ffb7c5;
-    padding: 1 0;
-    width: 100%;
-}
-
-#pomo-phase {
-    text-align: center;
-    width: 100%;
 }
 
 #pomo-quote {
