@@ -3,7 +3,7 @@ import subprocess
 
 from textual import work
 from textual.app import ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.widgets import Static, Label, Button, ProgressBar
 from textual.binding import Binding
 from textual.timer import Timer
@@ -94,24 +94,24 @@ class Pomodoro(Static):
     def compose(self) -> ComposeResult:
         yield Label("⏱ [ 修行 ] POMODORO", classes="widget-title")
         yield Label("", id="pomo-sessions")
-        yield Label(self._format_time(), id="pomo-timer", classes="kana-large")
+        with Horizontal(id="pomo-status-row"):
+            yield Label("READY", id="pomo-phase")
+            yield Label(self._format_time(), id="pomo-timer", classes="kana-large")
         yield ProgressBar(id="pomo-progress", total=100, show_eta=False, show_percentage=False)
-        yield Label("READY", id="pomo-phase", classes="kana-sub")
-        yield Label("", id="pomo-preset-label", classes="kana-sub")
-        yield Label("", id="pomo-quote", classes="kana-mean")
-        yield Label("", id="pomo-author", classes="kana-sub")
+        with Horizontal(id="pomo-presets"):
+            for work_m, brk, label in POMO_PRESETS:
+                yield Button(label, id=f"pomo-preset-{work_m}-{brk}", classes="pomo-preset-btn")
         with Horizontal(id="pomo-actions"):
             yield Button("Start", id="pomo-start-btn", variant="success")
             yield Button("Reset", id="pomo-reset-btn", variant="error")
-        with Horizontal(id="pomo-presets"):
-            for work, brk, label in POMO_PRESETS:
-                yield Button(label, id=f"pomo-preset-{work}-{brk}", classes="pomo-preset-btn")
+        yield Label("", id="pomo-quote", classes="kana-mean")
+        yield Label("", id="pomo-author", classes="kana-sub")
 
     def on_mount(self) -> None:
         self._load_sessions()
         self._show_quote()
         self._update_session_display()
-        self._update_preset_label()
+        self._update_active_preset()
         self._update_phase_class()
         self._update_progress()
         self.set_interval(300, self._change_quote)
@@ -125,10 +125,15 @@ class Pomodoro(Static):
         self._sessions_today = count
         self._update_session_display()
 
-    def _update_preset_label(self) -> None:
-        self.query_one("#pomo-preset-label", Label).update(
-            f"Mode: {self._work_minutes}min work / {self._break_minutes}min break"
-        )
+    def _update_active_preset(self) -> None:
+        for btn in self.query(".pomo-preset-btn"):
+            btn.remove_class("active")
+        for work_m, brk, _label in POMO_PRESETS:
+            if work_m == self._work_minutes and brk == self._break_minutes:
+                try:
+                    self.query_one(f"#pomo-preset-{work_m}-{brk}", Button).add_class("active")
+                except Exception:
+                    pass
 
     def _change_quote(self) -> None:
         self._current_quote = random.choice(FGO_QUOTES)
@@ -249,7 +254,7 @@ class Pomodoro(Static):
         self._seconds_left = work * 60
         self._total_seconds = work * 60
         self._update_display()
-        self._update_preset_label()
+        self._update_active_preset()
 
     def action_reset_timer(self) -> None:
         if self._timer:
