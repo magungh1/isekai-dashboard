@@ -69,7 +69,7 @@ SRSTabs { column-span: 2; }
 NowPlaying { column-span: 2; }
 
 .tool-widget {
-    border: tall #00ffcc;
+    border: tall #00ffcc 40%;
     background: #161b22;
     padding: 1 2;
     margin: 1;
@@ -79,6 +79,11 @@ NowPlaying { column-span: 2; }
     scrollbar-color-hover: #00ffcc;
     scrollbar-color-active: #00ffcc;
     scrollbar-background: #161b22;
+}
+
+/* VP1: Focus glow on active widget */
+.tool-widget:focus-within {
+    border: tall #ffd700;
 }
 
 .widget-title {
@@ -388,5 +393,111 @@ NowPlaying {
     color: #e6edf3;
     width: 100%;
     height: auto;
+}
+
+/* VP7: Pomodoro phase background tints */
+.pomo-phase-idle {
+    background: #161b22;
+}
+
+.pomo-phase-work {
+    background: #1a1215;
+}
+
+.pomo-phase-break {
+    background: #121518;
+}
+
+/* VP2: Pomodoro countdown progress bar */
+#pomo-progress {
+    margin: 0 2;
+    width: 100%;
+}
+
+#pomo-progress .bar--bar {
+    color: #238636;
+}
+
+#pomo-progress .bar--complete {
+    color: #238636;
+}
+
+.pomo-phase-break #pomo-progress .bar--bar {
+    color: #ffb7c5;
+}
+
+.pomo-phase-break #pomo-progress .bar--complete {
+    color: #ffb7c5;
+}
+
+/* VP6: Calendar time-relative coloring */
+.cal-now {
+    color: #2ea043;
+    text-style: bold;
+}
+
+.cal-soon {
+    color: #d29922;
+    text-style: bold;
+}
+
+.cal-past {
+    color: #8b949e;
+}
+
+.cal-future {
+    color: #e6edf3;
+    text-style: bold;
+}
+
+/* Calendar next meeting countdown */
+#cal-next-meeting {
+    text-align: center;
+    color: #d29922;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+/* VP5: Now Playing progress bar */
+#np-progress {
+    margin: 1 2;
+    width: 100%;
+}
+
+#np-progress .bar--bar {
+    color: #00ffcc;
+}
+
+#np-progress .bar--complete {
+    color: #00ffcc;
+}
+
+/* PR section headers */
+.pr-section-header {
+    color: #8b949e;
+    text-style: bold;
+    margin-top: 1;
+}
+
+.pr-needs-review {
+    color: #58a6ff;
+    text-overflow: ellipsis;
+}
+
+/* PR age and CI status */
+.pr-age {
+    color: #8b949e;
+}
+
+.pr-ci-pass {
+    color: #2ea043;
+}
+
+.pr-ci-fail {
+    color: #f85149;
+}
+
+.pr-ci-pending {
+    color: #d29922;
 }
 

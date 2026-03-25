@@ -58,6 +58,7 @@ class IsekaiDashboard(App):
         ("f4", "focus_widget(3)", "Calendar"),
         ("f5", "focus_widget(4)", "SRS"),
         ("f6", "focus_widget(5)", "Music"),
+        ("a", "quick_add_quest", "Add Quest"),
     ]
 
     _widget_classes = [DailyQuests, Pomodoro, PullRequests, Calendar, SRSTabs, NowPlaying]
@@ -78,6 +79,19 @@ class IsekaiDashboard(App):
         widgets = self.query(".tool-widget")
         if 0 <= index < len(widgets):
             widgets[index].focus()
+
+    def action_quick_add_quest(self) -> None:
+        quests = self.query_one(DailyQuests)
+        quests.focus()
+        try:
+            from textual.widgets import TabbedContent
+            tabs = quests.query_one("#quest-tabs", TabbedContent)
+            active_id = tabs.active
+            category = active_id.replace("tab-", "") if active_id else "daily"
+            input_widget = quests.query_one(f"#quest-input-{category}")
+            input_widget.focus()
+        except Exception:
+            pass
 
     def on_mount(self) -> None:
         if not os.path.exists(DB_PATH):

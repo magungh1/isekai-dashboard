@@ -1,13 +1,14 @@
 import random
 import subprocess
 
+from textual import work
 from textual.app import ComposeResult
 from textual.containers import Horizontal
-from textual.widgets import Static, Label, Button
+from textual.widgets import Static, Label, Button, ProgressBar
 from textual.binding import Binding
 from textual.timer import Timer
 
-from services.xp_service import add_xp, XP_POMODORO_COMPLETE
+from services.xp_service import add_xp, XP_POMODORO_COMPLETE, get_today_pomodoro_count
 
 IDLE = "idle"
 WORK = "work"
@@ -84,6 +85,7 @@ class Pomodoro(Static):
         self._work_minutes = WORK_MINUTES
         self._break_minutes = BREAK_MINUTES
         self._seconds_left = WORK_MINUTES * 60
+        self._total_seconds = WORK_MINUTES * 60
         self._timer: Timer | None = None
         self._current_quote = random.choice(FGO_QUOTES)
         self._sessions_today = 0
@@ -93,6 +95,7 @@ class Pomodoro(Static):
         yield Label("⏱ [ 修行 ] POMODORO", classes="widget-title")
         yield Label("", id="pomo-sessions")
         yield Label(self._format_time(), id="pomo-timer", classes="kana-large")
+        yield ProgressBar(id="pomo-progress", total=100, show_eta=False, show_percentage=False)
         yield Label("READY", id="pomo-phase", classes="kana-sub")
         yield Label("", id="pomo-preset-label", classes="kana-sub")
         yield Label("", id="pomo-quote", classes="kana-mean")
@@ -105,10 +108,22 @@ class Pomodoro(Static):
                 yield Button(label, id=f"pomo-preset-{work}-{brk}", classes="pomo-preset-btn")
 
     def on_mount(self) -> None:
+        self._load_sessions()
         self._show_quote()
         self._update_session_display()
         self._update_preset_label()
+        self._update_phase_class()
+        self._update_progress()
         self.set_interval(300, self._change_quote)
+
+    @work(thread=True)
+    def _load_sessions(self) -> None:
+        count = get_today_pomodoro_count()
+        self.app.call_from_thread(self._set_sessions, count)
+
+    def _set_sessions(self, count: int) -> None:
+        self._sessions_today = count
+        self._update_session_display()
 
     def _update_preset_label(self) -> None:
         self.query_one("#pomo-preset-label", Label).update(
@@ -134,8 +149,24 @@ class Pomodoro(Static):
             f"Sessions: {pips} ({self._sessions_today} today)"
         )
 
+    def _update_progress(self) -> None:
+        progress = self.query_one("#pomo-progress", ProgressBar)
+        progress.total = max(self._total_seconds, 1)
+        elapsed = self._total_seconds - self._seconds_left
+        progress.progress = elapsed
+
+    def _update_phase_class(self) -> None:
+        self.remove_class("pomo-phase-idle", "pomo-phase-work", "pomo-phase-break")
+        if self._phase == WORK:
+            self.add_class("pomo-phase-work")
+        elif self._phase == BREAK:
+            self.add_class("pomo-phase-break")
+        else:
+            self.add_class("pomo-phase-idle")
+
     def _update_display(self) -> None:
         self.query_one("#pomo-timer", Label).update(self._format_time())
+        self._update_progress()
 
         if self._phase == WORK:
             self.query_one("#pomo-phase", Label).update("⚔️ FOCUS TIME")
@@ -160,7 +191,6 @@ class Pomodoro(Static):
             self._sessions_today += 1
             self._update_session_display()
             add_xp(XP_POMODORO_COMPLETE, "pomodoro")
-            # Refresh XP bar
             try:
                 xp_bar = self.app.query_one("XPBar")
                 xp_bar.refresh_xp()
@@ -169,13 +199,17 @@ class Pomodoro(Static):
 
             self._phase = BREAK
             self._seconds_left = self._break_minutes * 60
+            self._total_seconds = self._break_minutes * 60
             self._change_quote()
+            self._update_phase_class()
             self.app.notify(f"Session #{self._sessions_today} complete! +{XP_POMODORO_COMPLETE} XP. Break time!", title="Pomodoro")
             _send_macos_notification("Pomodoro Complete!", f"Session #{self._sessions_today} done. Take a break!")
         elif self._phase == BREAK:
             self._phase = WORK
             self._seconds_left = self._work_minutes * 60
+            self._total_seconds = self._work_minutes * 60
             self._change_quote()
+            self._update_phase_class()
             self.app.notify("Focus time! ⚔️", title="Pomodoro")
             _send_macos_notification("Break Over!", "Time to focus again!")
 
@@ -201,6 +235,8 @@ class Pomodoro(Static):
         else:
             if self._phase == IDLE:
                 self._phase = WORK
+                self._total_seconds = self._work_minutes * 60
+                self._update_phase_class()
             self._timer = self.set_interval(1, self._tick)
             self._update_display()
             btn.label = "Pause"
@@ -211,6 +247,7 @@ class Pomodoro(Static):
         self._work_minutes = work
         self._break_minutes = brk
         self._seconds_left = work * 60
+        self._total_seconds = work * 60
         self._update_display()
         self._update_preset_label()
 
@@ -220,6 +257,8 @@ class Pomodoro(Static):
             self._timer = None
         self._phase = IDLE
         self._seconds_left = self._work_minutes * 60
+        self._total_seconds = self._work_minutes * 60
         self._change_quote()
         self._update_display()
+        self._update_phase_class()
         self.query_one("#pomo-start-btn", Button).label = "Start"

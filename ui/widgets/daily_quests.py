@@ -95,6 +95,10 @@ class QuestTab(Container):
         quest = toggle_quest(quest_id)
         if quest.is_done:
             add_xp(XP_QUEST_COMPLETE, "quest")
+            self.app.notify(
+                f"Quest complete! +{XP_QUEST_COMPLETE} XP ⚔️",
+                title="Quest",
+            )
             try:
                 xp_bar = self.app.query_one("XPBar")
                 xp_bar.refresh_xp()
