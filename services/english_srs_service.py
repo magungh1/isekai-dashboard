@@ -70,3 +70,25 @@ def get_stats() -> dict:
         due = conn.execute('SELECT COUNT(*) FROM english_srs WHERE next_review <= ?', (now,)).fetchone()[0]
         mastered = conn.execute('SELECT COUNT(*) FROM english_srs WHERE level >= 4').fetchone()[0]
         return {'total': total, 'due': due, 'mastered': mastered}
+
+
+def get_detailed_stats() -> dict:
+    with db_lock:
+        conn = get_shared_connection()
+        now = datetime.now().isoformat()
+        tomorrow = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0).isoformat()
+
+        total = conn.execute('SELECT COUNT(*) FROM english_srs').fetchone()[0]
+        due = conn.execute('SELECT COUNT(*) FROM english_srs WHERE next_review <= ?', (now,)).fetchone()[0]
+        due_tomorrow = conn.execute('SELECT COUNT(*) FROM english_srs WHERE next_review <= ?', (tomorrow,)).fetchone()[0]
+
+        level_dist = {}
+        for row in conn.execute('SELECT level, COUNT(*) FROM english_srs GROUP BY level ORDER BY level').fetchall():
+            level_dist[row[0]] = row[1]
+
+        return {
+            'total': total,
+            'due_now': due,
+            'due_tomorrow': due_tomorrow,
+            'level_distribution': level_dist,
+        }

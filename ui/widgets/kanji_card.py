@@ -4,9 +4,11 @@ from textual.widgets import Static, Label
 from textual.binding import Binding
 
 from services.kanji_srs_service import get_due_cards, review_card, save_mnemonic, get_stats
+from services.xp_service import add_xp, XP_SRS_REVIEW
 from clients.llm_client import generate_kanji_mnemonic
 from core.models import KanjiCard as KanjiCardModel
 from core.kana_romaji import to_romaji
+from ui.widgets.srs_utils import level_badge, progress_bar_text
 
 FRONT = 0
 BACK = 1
@@ -53,9 +55,8 @@ class KanjiVocab(Static):
         self._cards = cards
         self._state = FRONT
 
-        self.query_one("#kanji-stats", Label).update(
-            f"Due: {stats['due']} | Mastered: {stats['mastered']}/{stats['total']}"
-        )
+        bar = progress_bar_text(stats['mastered'], stats['total'])
+        self.query_one("#kanji-stats", Label).update(f"Due: {stats['due']}  {bar}")
 
         if cards:
             self._show_front(cards[0])
@@ -72,8 +73,8 @@ class KanjiVocab(Static):
         self._current_card = card
         self._state = FRONT
         self.query_one("#kanji-char", Label).update(f"  {card.kanji}  ")
-        level_stars = "⭐" * card.level if card.level > 0 else "🆕"
-        self.query_one("#kanji-level", Label).update(f"漢字 | Level: {level_stars}")
+        badge = level_badge(card.level)
+        self.query_one("#kanji-level", Label).update(f"漢字  |  {badge}")
         self.query_one("#kanji-kun", Label).update("")
         self.query_one("#kanji-on", Label).update("")
         self.query_one("#kanji-meaning", Label).update("")
@@ -140,6 +141,14 @@ class KanjiVocab(Static):
     @work(thread=True)
     def _rate_card(self, card_id: int, rating: str) -> None:
         review_card(card_id, rating)
+        add_xp(XP_SRS_REVIEW, "srs_kanji")
         cards = get_due_cards(limit=20)
         stats = get_stats()
         self.app.call_from_thread(self._set_cards, cards, stats)
+        self.app.call_from_thread(self._refresh_xp)
+
+    def _refresh_xp(self) -> None:
+        try:
+            self.app.query_one("XPBar").refresh_xp()
+        except Exception:
+            pass

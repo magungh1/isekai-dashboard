@@ -82,3 +82,29 @@ def get_stats(kana_type: str | None = None) -> dict:
             due = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE next_review <= ?', (now,)).fetchone()[0]
             mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= 4').fetchone()[0]
         return {'total': total, 'due': due, 'mastered': mastered}
+
+
+def get_detailed_stats(kana_type: str | None = None) -> dict:
+    """Extended stats for the statistics panel."""
+    with db_lock:
+        conn = get_shared_connection()
+        now = datetime.now().isoformat()
+        tomorrow = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0).isoformat()
+
+        type_filter = "AND type = ?" if kana_type else ""
+        params_base = (kana_type,) if kana_type else ()
+
+        total = conn.execute(f'SELECT COUNT(*) FROM kana_srs WHERE 1=1 {type_filter}', params_base).fetchone()[0]
+        due = conn.execute(f'SELECT COUNT(*) FROM kana_srs WHERE next_review <= ? {type_filter}', (now, *params_base)).fetchone()[0]
+        due_tomorrow = conn.execute(f'SELECT COUNT(*) FROM kana_srs WHERE next_review <= ? {type_filter}', (tomorrow, *params_base)).fetchone()[0]
+
+        level_dist = {}
+        for row in conn.execute(f'SELECT level, COUNT(*) FROM kana_srs WHERE 1=1 {type_filter} GROUP BY level ORDER BY level', params_base).fetchall():
+            level_dist[row[0]] = row[1]
+
+        return {
+            'total': total,
+            'due_now': due,
+            'due_tomorrow': due_tomorrow,
+            'level_distribution': level_dist,
+        }

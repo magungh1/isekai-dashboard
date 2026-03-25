@@ -4,9 +4,11 @@ from textual.widgets import Static, Label
 from textual.binding import Binding
 
 from services.srs_service import get_due_cards, review_card, save_mnemonic, get_stats
+from services.xp_service import add_xp, XP_SRS_REVIEW
 from clients.llm_client import generate_mnemonic
 from core.models import KanaCard as KanaCardModel
 from core.kana_romaji import to_romaji, to_hiragana, to_katakana
+from ui.widgets.srs_utils import level_badge, progress_bar_text
 
 # States: 0 = front (kana only), 1 = romaji, 2 = meaning + rating
 FRONT = 0
@@ -66,7 +68,8 @@ class KanaOfTheDay(Static):
         self._cards = cards
         self._state = FRONT
 
-        self._q("stats").update(f"Due: {stats['due']} | Mastered: {stats['mastered']}/{stats['total']}")
+        bar = progress_bar_text(stats['mastered'], stats['total'])
+        self._q("stats").update(f"Due: {stats['due']}  {bar}")
 
         if cards:
             self._show_front(cards[0])
@@ -83,9 +86,9 @@ class KanaOfTheDay(Static):
         self._state = FRONT
         self._q("word").update(f"  {card.word}  ")
         self._q("alt").update("")
-        level_stars = "⭐" * card.level if card.level > 0 else "🆕"
+        badge = level_badge(card.level)
         tag = "カタカナ" if card.type == "katakana" else "ひらがな"
-        self._q("romaji").update(f"{tag} | Level: {level_stars}")
+        self._q("romaji").update(f"{tag}  |  {badge}")
         self._q("meaning").update("")
         self._q("mnemonic").update("")
         self._q("actions").update("space: Show Romaji")
@@ -153,6 +156,14 @@ class KanaOfTheDay(Static):
     @work(thread=True)
     def _rate_card(self, card_id: int, rating: str) -> None:
         review_card(card_id, rating)
+        add_xp(XP_SRS_REVIEW, "srs_kana")
         cards = get_due_cards(limit=20, kana_type=self._kana_type)
         stats = get_stats(kana_type=self._kana_type)
         self.app.call_from_thread(self._set_cards, cards, stats)
+        self.app.call_from_thread(self._refresh_xp)
+
+    def _refresh_xp(self) -> None:
+        try:
+            self.app.query_one("XPBar").refresh_xp()
+        except Exception:
+            pass
