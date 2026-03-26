@@ -160,6 +160,13 @@ NowPlaying { column-span: 2; }
     color: #e6edf3;
 }
 
+.quest-edit-input {
+    background: #0d1117;
+    border: tall #ffd700 60%;
+    color: #e6edf3;
+    height: auto;
+}
+
 #quest-tabs {
     height: 100%;
 }
@@ -203,6 +210,19 @@ QuestItem Horizontal {
 
 QuestItem Horizontal Label {
     width: 1fr;
+}
+
+.quest-toggle-btn {
+    min-width: 5;
+    max-width: 5;
+    height: 1;
+    background: transparent;
+    color: #8b949e;
+    border: none;
+}
+
+.quest-toggle-btn:hover {
+    color: #2ea043;
 }
 
 .quest-delete-btn {
@@ -553,6 +573,34 @@ PRItem Horizontal Label {
     max-width: 3;
     height: 1;
     background: #da3633;
+    color: #ffffff;
+    border: none;
+}
+
+/* Notifications */
+.notif-section-header {
+    color: #d29922;
+}
+
+.notif-text {
+    color: #c9d1d9;
+    text-overflow: ellipsis;
+}
+
+NotificationItem Horizontal {
+    height: auto;
+    width: 100%;
+}
+
+NotificationItem Horizontal Label {
+    width: 1fr;
+}
+
+.notif-dismiss-btn {
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    background: #238636;
     color: #ffffff;
     border: none;
 }

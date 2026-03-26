@@ -50,6 +50,18 @@ def toggle_quest(quest_id: int) -> Quest:
         return Quest(**dict(row))
 
 
+def update_quest(quest_id: int, title: str, deadline: str | None = None) -> Quest:
+    with db_lock:
+        conn = get_shared_connection()
+        conn.execute(
+            'UPDATE quests SET title = ?, deadline = ? WHERE id = ?',
+            (title, deadline, quest_id)
+        )
+        conn.commit()
+        row = conn.execute('SELECT * FROM quests WHERE id = ?', (quest_id,)).fetchone()
+        return Quest(**dict(row))
+
+
 def delete_quest(quest_id: int) -> None:
     with db_lock:
         conn = get_shared_connection()
