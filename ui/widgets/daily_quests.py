@@ -1,13 +1,13 @@
 import logging
 
-from textual import work
+from textual import events, work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.widgets import Static, Label, ListView, ListItem, Input, TabbedContent, TabPane, Button
 
 from services.quests_service import (
     get_quests_by_category, add_quest, toggle_quest, delete_quest,
-    reset_daily_quests, reset_weekly_quests,
+    update_quest, reset_daily_quests, reset_weekly_quests,
 )
 from services.xp_service import add_xp, XP_QUEST_COMPLETE
 from core.models import Quest
@@ -28,17 +28,43 @@ class QuestItem(ListItem):
     def __init__(self, quest: Quest) -> None:
         super().__init__()
         self.quest = quest
+        self._editing = False
 
     def compose(self) -> ComposeResult:
-        prefix = "[x]" if self.quest.is_done else "[ ]"
+        toggle_label = "[x]" if self.quest.is_done else "[ ]"
         css_class = "quest-done" if self.quest.is_done else "quest-pending"
         cat_icon, cat_css = CATEGORY_COLORS.get(self.quest.category, ('', 'quest-pending'))
-        text = f"{prefix} {self.quest.title}"
+        text = self.quest.title
         if self.quest.deadline:
             text += f"  ({self.quest.deadline})"
-        with Horizontal():
+        with Horizontal(classes="quest-display"):
+            yield Button(toggle_label, classes="quest-toggle-btn")
             yield Label(text, classes=f"{css_class} {cat_css}")
             yield Button("x", variant="error", classes="quest-delete-btn")
+        # Edit input (hidden by default)
+        edit_value = self.quest.title
+        if self.quest.deadline:
+            edit_value += f" | {self.quest.deadline}"
+        yield Input(
+            value=edit_value,
+            id=f"quest-edit-{self.quest.id}",
+            classes="quest-edit-input",
+        )
+
+    def on_mount(self) -> None:
+        self.query_one(".quest-edit-input", Input).display = False
+
+    def start_edit(self) -> None:
+        self._editing = True
+        self.query_one(".quest-display", Horizontal).display = False
+        edit_input = self.query_one(".quest-edit-input", Input)
+        edit_input.display = True
+        edit_input.focus()
+
+    def cancel_edit(self) -> None:
+        self._editing = False
+        self.query_one(".quest-display", Horizontal).display = True
+        self.query_one(".quest-edit-input", Input).display = False
 
 
 class QuestTab(Container):
@@ -78,18 +104,49 @@ class QuestTab(Container):
             list_view.append(QuestItem(quest))
         logger.debug("ListView children count: %d", len(list_view.children))
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if "quest-delete-btn" in event.button.classes:
-            item = event.button.parent
-            while item and not isinstance(item, QuestItem):
-                item = item.parent
-            if item and isinstance(item, QuestItem):
-                delete_quest(item.quest.id)
-                self._deferred_load()
+    def on_key(self, event: events.Key) -> None:
+        # Handle Escape to cancel edit
+        if event.key == "escape" and isinstance(self.app.focused, Input):
+            focused = self.app.focused
+            if focused.id and focused.id.startswith("quest-edit-"):
+                item = focused.parent
+                while item and not isinstance(item, QuestItem):
+                    item = item.parent
+                if isinstance(item, QuestItem):
+                    item.cancel_edit()
+                    event.prevent_default()
+                    event.stop()
+                return
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if isinstance(event.item, QuestItem):
-            self._toggle_quest(event.item.quest.id)
+        # Handle 'e' to edit highlighted quest
+        if event.key == "e" and not isinstance(self.app.focused, Input):
+            list_view = self.query_one(f"#quest-list-{self._category}", ListView)
+            if list_view.highlighted_child and isinstance(list_view.highlighted_child, QuestItem):
+                list_view.highlighted_child.start_edit()
+                event.prevent_default()
+                event.stop()
+                return
+
+        # Handle 'x' to toggle highlighted quest done/undone
+        if event.key == "x" and not isinstance(self.app.focused, Input):
+            list_view = self.query_one(f"#quest-list-{self._category}", ListView)
+            if list_view.highlighted_child and isinstance(list_view.highlighted_child, QuestItem):
+                self._toggle_quest(list_view.highlighted_child.quest.id)
+                event.prevent_default()
+                event.stop()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        item = event.button.parent
+        while item and not isinstance(item, QuestItem):
+            item = item.parent
+        if not isinstance(item, QuestItem):
+            return
+
+        if "quest-toggle-btn" in event.button.classes:
+            self._toggle_quest(item.quest.id)
+        elif "quest-delete-btn" in event.button.classes:
+            delete_quest(item.quest.id)
+            self._deferred_load()
 
     def _toggle_quest(self, quest_id: int) -> None:
         quest = toggle_quest(quest_id)
@@ -107,6 +164,21 @@ class QuestTab(Container):
         self._deferred_load()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        # Handle edit input submission
+        if event.input.id and event.input.id.startswith("quest-edit-"):
+            quest_id = int(event.input.id.replace("quest-edit-", ""))
+            value = event.value.strip()
+            if value:
+                deadline = None
+                if "|" in value:
+                    parts = value.rsplit("|", 1)
+                    value = parts[0].strip()
+                    deadline = parts[1].strip()
+                update_quest(quest_id, value, deadline)
+            self._deferred_load()
+            return
+
+        # Handle add-quest input
         if event.input.id != f"quest-input-{self._category}":
             return
         value = event.value.strip()

@@ -86,3 +86,57 @@ def close_pr(repo_fullname: str, number: int) -> bool:
 def open_pr_in_browser(url: str) -> None:
     import webbrowser
     webbrowser.open(url)
+
+
+def _api_url_to_html(api_url: str) -> str:
+    """Convert GitHub API URL to browser URL.
+
+    e.g. https://api.github.com/repos/owner/repo/pulls/123
+      -> https://github.com/owner/repo/pull/123
+    """
+    if not api_url:
+        return ""
+    url = api_url.replace("https://api.github.com/repos/", "https://github.com/")
+    url = url.replace("/pulls/", "/pull/")
+    return url
+
+
+def fetch_notifications() -> list[dict] | None:
+    """Fetch unread GitHub notifications via gh CLI."""
+    try:
+        result = subprocess.run(
+            ['gh', 'api', 'notifications'],
+            capture_output=True, text=True, check=True
+        )
+        raw = json.loads(result.stdout)
+        notifications = []
+        for n in raw:
+            if not n.get('unread', False):
+                continue
+            repo = n.get('repository', {})
+            subject = n.get('subject', {})
+            notifications.append({
+                'id': n['id'],
+                'reason': n.get('reason', ''),
+                'title': subject.get('title', ''),
+                'type': subject.get('type', ''),
+                'url': _api_url_to_html(subject.get('url', '')),
+                'repo': repo.get('name', ''),
+                'repo_full': repo.get('full_name', ''),
+                'updated_at': n.get('updated_at', ''),
+            })
+        return notifications
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+
+def mark_notification_read(thread_id: str) -> bool:
+    """Mark a single notification thread as read."""
+    try:
+        subprocess.run(
+            ['gh', 'api', '--method', 'PATCH', f'notifications/threads/{thread_id}'],
+            capture_output=True, text=True, check=True
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
