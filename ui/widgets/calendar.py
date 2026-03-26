@@ -2,7 +2,8 @@ import webbrowser
 
 from textual import work
 from textual.app import ComposeResult
-from textual.widgets import Static, Label, ListView, ListItem
+from textual.containers import Horizontal
+from textual.widgets import Static, Label, ListView, ListItem, Button
 
 from clients.calendar_client import (
     fetch_today_events, get_event_time_status, get_next_meeting_countdown,
@@ -30,11 +31,16 @@ class CalendarItem(ListItem):
             title = f"{title} ({self.event['time']})"
         status = get_event_time_status(self.event.get('time'))
         css_class = STATUS_CSS.get(status, "cal-future")
-        yield Label(f"{icon} {title}", classes=css_class)
+        with Horizontal():
+            yield Label(f"{icon} {title}", classes=css_class)
+            if self.event.get('url'):
+                yield Button("Meet", variant="primary", classes="cal-meet-btn")
 
 
 class Calendar(Static):
     """Fetches live events from macOS Calendar via icalBuddy."""
+
+    can_focus = True
 
     def compose(self) -> ComposeResult:
         yield Label("⏳ [ 予定表 ] CALENDAR", classes="widget-title")
@@ -70,6 +76,10 @@ class Calendar(Static):
 
         self.app.call_from_thread(update_ui)
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if isinstance(event.item, CalendarItem) and event.item.event.get('url'):
-            webbrowser.open(event.item.event['url'])
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if "cal-meet-btn" in event.button.classes:
+            item = event.button.parent
+            while item and not isinstance(item, CalendarItem):
+                item = item.parent
+            if item and item.event.get('url'):
+                webbrowser.open(item.event['url'])

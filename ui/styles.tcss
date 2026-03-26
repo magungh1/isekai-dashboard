@@ -179,7 +179,8 @@ QuestTab {
 }
 
 #cal-list ListItem {
-    padding: 1 0;
+    padding: 0 1;
+    margin: 1 0;
 }
 
 #cal-list Label {
@@ -457,6 +458,25 @@ NowPlaying {
 .cal-future {
     color: #e6edf3;
     text-style: bold;
+}
+
+CalendarItem Horizontal {
+    height: auto;
+    width: 100%;
+}
+
+CalendarItem Horizontal Label {
+    width: 1fr;
+}
+
+.cal-meet-btn {
+    dock: right;
+    min-width: 6;
+    max-width: 6;
+    height: 1;
+    background: #238636;
+    color: #ffffff;
+    border: none;
 }
 
 /* Calendar next meeting countdown */
