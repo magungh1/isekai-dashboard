@@ -31,6 +31,7 @@ else:
 
 logger.info("OPENROUTER_API_KEY in env: %s", bool(os.environ.get('OPENROUTER_API_KEY')))
 
+from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Grid
 from textual.widgets import Header, Footer
@@ -52,16 +53,31 @@ class IsekaiDashboard(App):
 
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("ctrl+1", "focus_widget(0)", "Quests"),
-        ("ctrl+2", "focus_widget(1)", "Pomodoro"),
-        ("ctrl+3", "focus_widget(2)", "PRs"),
-        ("ctrl+4", "focus_widget(3)", "Calendar"),
-        ("ctrl+5", "focus_widget(4)", "SRS"),
-        ("ctrl+6", "focus_widget(5)", "Music"),
         ("a", "quick_add_quest", "Add Quest"),
     ]
 
     _widget_classes = [DailyQuests, Pomodoro, PullRequests, Calendar, SRSTabs, NowPlaying]
+    _pending_g: bool = False
+
+    def on_key(self, event: events.Key) -> None:
+        from textual.widgets import Input
+        # Don't intercept keys when typing in an input field
+        if isinstance(self.focused, Input):
+            self._pending_g = False
+            return
+
+        if self._pending_g:
+            self._pending_g = False
+            if event.character and event.character in "123456":
+                self.action_focus_widget(int(event.character) - 1)
+                event.prevent_default()
+                event.stop()
+            return
+
+        if event.character == "g":
+            self._pending_g = True
+            event.prevent_default()
+            event.stop()
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
