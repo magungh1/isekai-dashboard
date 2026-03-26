@@ -110,8 +110,11 @@ def fetch_notifications() -> list[dict] | None:
         )
         raw = json.loads(result.stdout)
         notifications = []
+        allowed_reasons = {"review_requested", "mention"}
         for n in raw:
             if not n.get('unread', False):
+                continue
+            if n.get('reason', '') not in allowed_reasons:
                 continue
             repo = n.get('repository', {})
             subject = n.get('subject', {})
