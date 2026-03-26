@@ -28,7 +28,7 @@ See `make help` for all available commands.
   - SRS intervals: New → 4h → 1d → 3d → 1w → 1mo
   - 4-level grading: Again (reset) / Hard (stay) / Good (+1) / Easy (+2)
   - Color-coded level badges and progress bars on each card
-- **Pull Requests** — Fetches open PRs and review-requested PRs via `gh` CLI (auto-refreshes every 5 min). Shows CI status and PR age. `a` to approve review-requested PRs. Opens in browser on Enter.
+- **Pull Requests** — Fetches open PRs and review-requested PRs via `gh` CLI (auto-refreshes every 5 min). Shows CI status and PR age. Inline "Approve" button on review-requested PRs, "Close" button on authored PRs. Opens in browser on Enter.
 - **Calendar** — Today's macOS calendar events via `icalBuddy` (auto-refreshes every 2 min). Time-relative coloring (green=now, yellow=soon, gray=past). Shows countdown to next meeting. Green "Meet" button on events with Google Meet/Zoom/Teams links.
 - **Now Playing** — Shows current YouTube/YouTube Music track from browser (AppleScript), with play/pause toggle and playback progress bar. Supports multiple YouTube tabs: auto-prioritizes the playing tab, with `n`/`p` to cycle between tabs.
 - **LLM Mnemonics** — Auto-generates mnemonics via OpenRouter API (optional, set `OPENROUTER_API_KEY`).
