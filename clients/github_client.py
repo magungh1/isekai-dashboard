@@ -72,6 +72,17 @@ def get_ci_status(pr: dict) -> str:
     return ""
 
 
+def close_pr(repo_fullname: str, number: int) -> bool:
+    try:
+        subprocess.run(
+            ['gh', 'pr', 'close', str(number), '-R', repo_fullname],
+            capture_output=True, text=True, check=True
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
 def open_pr_in_browser(url: str) -> None:
     import webbrowser
     webbrowser.open(url)

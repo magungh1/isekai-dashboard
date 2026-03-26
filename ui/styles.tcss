@@ -530,3 +530,30 @@ CalendarItem Horizontal Label {
     color: #d29922;
 }
 
+PRItem Horizontal {
+    height: auto;
+    width: 100%;
+}
+
+PRItem Horizontal Label {
+    width: 1fr;
+}
+
+.pr-approve-btn {
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    background: #238636;
+    color: #ffffff;
+    border: none;
+}
+
+.pr-close-btn {
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    background: #da3633;
+    color: #ffffff;
+    border: none;
+}
+

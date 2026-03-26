@@ -10,41 +10,19 @@ DB_PATH = "isekai.db"
 
 def get_existing_words(csv_path: str) -> Set[str]:
     words = set()
-    # 1. From DB
     if os.path.exists(DB_PATH):
         try:
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
-            
-            # Check kana_srs
-            cursor.execute("SELECT word FROM kana_srs")
+            cursor.execute("SELECT word FROM english_srs")
             for row in cursor.fetchall():
                 words.add(row[0])
-                
-            # Check kanji_srs if it exists
-            try:
-                cursor.execute("SELECT kanji FROM kanji_srs")
-                for row in cursor.fetchall():
-                    words.add(row[0])
-            except sqlite3.OperationalError:
-                pass # Table might not exist yet
-                
             conn.close()
         except Exception as e:
             print(f"Warning: Could not read from database. {e}")
             
-    # 2. From Output CSV
     if os.path.exists(csv_path):
         with open(csv_path, 'r', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if row and not row[0].startswith('#'):
-                    words.add(row[0].strip())
-                    
-    # 3. From example_vocab.csv
-    example_csv = "example_vocab.csv"
-    if os.path.exists(example_csv):
-        with open(example_csv, 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
             for row in reader:
                 if row and not row[0].startswith('#'):
@@ -54,28 +32,26 @@ def get_existing_words(csv_path: str) -> Set[str]:
 
 def extract_vocab_from_text(text: str, client: OpenAI) -> list[dict]:
     prompt = f"""
-    You are an expert Japanese tutor. Extract useful Japanese vocabularies (words) from the following text.
+    You are an expert English vocabulary tutor. Extract useful English vocabulary words from the following text.
     For each word, provide:
-    1. word: The Japanese word (in its original/dictionary form).
-    2. type: The character type, choose exactly one from: 'katakana', 'hiragana', or 'kanji'.
-    3. meaning: The English meaning of the word in this context.
-    4. kun_reading: The Kun'yomi (Japanese reading) in hiragana. ONLY required if type is 'kanji', otherwise leave empty ("").
-    5. on_reading: The On'yomi (Chinese reading) in katakana. ONLY required if type is 'kanji', otherwise leave empty ("").
+    1. word: The English word (in its dictionary/base form).
+    2. part_of_speech: The part of speech, choose exactly one from: 'noun', 'verb', 'adj', 'adv', 'prep', 'conj', 'interj', 'pron'.
+    3. definition: Clear English definition of the word in this context.
+    4. example: A sentence example showing how the word is used.
     
-    Return the result STRICTLY as a JSON array of objects, with keys "word", "type", "meaning", "kun_reading", "on_reading". 
+    Return the result STRICTLY as a JSON array of objects, with keys "word", "part_of_speech", "definition", "example". 
     Do not include markdown formatting like ```json or any other text.
     
     Example output format:
     [
-        {{"word": "パソコン", "type": "katakana", "meaning": "personal computer", "kun_reading": "", "on_reading": ""}},
-        {{"word": "食", "type": "kanji", "meaning": "eat, food", "kun_reading": "た.べる", "on_reading": "ショク"}}
+        {{"word": "ephemeral", "part_of_speech": "adj", "definition": "lasting for a very short time", "example": "Ephemeral containers are destroyed after use"}},
+        {{"word": "ubiquitous", "part_of_speech": "adj", "definition": "present, appearing, or found everywhere", "example": "Smartphones have become ubiquitous in modern society"}}
     ]
     
     Text:
     {text}
     """
     
-    # We use gemini-2.5-pro via OpenRouter for high-quality extraction
     response = client.chat.completions.create(
         model="google/gemini-2.5-pro", 
         messages=[{"role": "user", "content": prompt}]
@@ -83,7 +59,6 @@ def extract_vocab_from_text(text: str, client: OpenAI) -> list[dict]:
     
     content = response.choices[0].message.content.strip()
     
-    # Clean up markdown if the LLM adds it anyway
     if content.startswith("```json"):
         content = content[7:-3].strip()
     elif content.startswith("```"):
@@ -96,7 +71,6 @@ def extract_vocab_from_text(text: str, client: OpenAI) -> list[dict]:
         elif isinstance(data, list):
              return data
         elif isinstance(data, dict):
-            # Try to find a list value just in case
             for val in data.values():
                 if isinstance(val, list):
                     return val
@@ -107,17 +81,17 @@ def extract_vocab_from_text(text: str, client: OpenAI) -> list[dict]:
         return []
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract Japanese vocabularies from text and append new ones to a CSV.")
+    parser = argparse.ArgumentParser(description="Extract English vocabularies from text and append new ones to a CSV.")
     parser.add_argument("--text", help="Direct text input to extract vocabularies from.")
     parser.add_argument("input_file", nargs='?', help="Path to the input text or markdown file.")
-    parser.add_argument("--output", default="more_vocab.csv", help="Path to the output CSV file.")
+    parser.add_argument("--output", default="english_vocab.csv", help="Path to the output CSV file.")
     args = parser.parse_args()
 
     if not args.text and not args.input_file:
         print("Error: Either --text or input_file must be provided.")
         print("Usage:")
-        print("  uv run vocab_extractor.py --text 'your text here'")
-        print("  uv run vocab_extractor.py path/to/file.md")
+        print("  uv run english_vocab_extractor.py --text 'your text here'")
+        print("  uv run english_vocab_extractor.py path/to/file.md")
         return
 
     api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -133,14 +107,14 @@ def main():
 
     if args.text:
         text = args.text
-        print("Extracting vocabularies from provided text...")
+        print("Extracting English vocabularies from provided text...")
     else:
         if not os.path.exists(args.input_file):
             print(f"Error: Input file {args.input_file} not found.")
             return
         with open(args.input_file, 'r', encoding='utf-8') as f:
             text = f.read()
-        print(f"Extracting vocabularies from {args.input_file}...")
+        print(f"Extracting English vocabularies from {args.input_file}...")
 
     extracted_vocabs = extract_vocab_from_text(text, client)
     
@@ -167,15 +141,14 @@ def main():
     with open(args.output, 'a', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["# word", "type", "meaning", "kun_reading", "on_reading"])
+            writer.writerow(["# word", "part_of_speech", "definition", "example"])
             
         for vocab in new_vocabs:
             writer.writerow([
                 vocab.get("word", ""), 
-                vocab.get("type", ""), 
-                vocab.get("meaning", ""),
-                vocab.get("kun_reading", ""),
-                vocab.get("on_reading", "")
+                vocab.get("part_of_speech", ""), 
+                vocab.get("definition", ""),
+                vocab.get("example", "")
             ])
             
     print(f"Done! {len(new_vocabs)} words appended. Please review {args.output} before inserting into the DB.")
