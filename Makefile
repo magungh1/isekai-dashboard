@@ -1,10 +1,13 @@
-.PHONY: run init extract ingest clean help test test-quests test-srs test-english test-kanji test-clients
+.PHONY: run init extract extract-text extract-english extract-english-text ingest clean help test test-quests test-srs test-english test-kanji test-clients
 
 help:
 	@echo "Available commands:"
 	@echo "  make run                   - Run the Isekai Dev Dashboard (via uv)"
 	@echo "  make init                  - Initialize database and seed base vocab (via uv)"
-	@echo "  make extract FILE=path     - Extract vocabularies from a text/markdown file (e.g., make extract FILE=novel.md)"
+	@echo "  make extract FILE=path     - Extract Japanese vocabularies from a text/markdown file (e.g., make extract FILE=novel.md)"
+	@echo "  make extract-text TEXT=\"...\" - Extract Japanese vocabularies from provided text"
+	@echo "  make extract-english FILE=path - Extract English vocabularies from a text/markdown file"
+	@echo "  make extract-english-text TEXT=\"...\" - Extract English vocabularies from provided text"
 	@echo "  make ingest FILE=path.csv  - Ingest vocabularies from a CSV into the DB (e.g., make ingest FILE=more_vocab.csv)"
 	@echo "  make test                  - Run all tests"
 	@echo "  make test-quests           - Run quest service tests"
@@ -26,6 +29,27 @@ extract:
 		exit 1; \
 	fi
 	uv run vocab_extractor.py "$(FILE)"
+
+extract-text:
+	@if [ -z "$(TEXT)" ]; then \
+		echo "Error: TEXT argument is required. Usage: make extract-text TEXT=\"your text here\""; \
+		exit 1; \
+	fi
+	uv run vocab_extractor.py --text "$(TEXT)"
+
+extract-english:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE argument is required. Usage: make extract-english FILE=path/to/file.md"; \
+		exit 1; \
+	fi
+	uv run english_vocab_extractor.py "$(FILE)"
+
+extract-english-text:
+	@if [ -z "$(TEXT)" ]; then \
+		echo "Error: TEXT argument is required. Usage: make extract-english-text TEXT=\"your text here\""; \
+		exit 1; \
+	fi
+	uv run english_vocab_extractor.py --text "$(TEXT)"
 
 ingest:
 	@if [ -z "$(FILE)" ]; then \

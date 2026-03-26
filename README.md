@@ -60,12 +60,33 @@ New → 4h → 1d → 3d → 1w → 1mo
 
 ## Vocabulary Import & Extraction
 
-Extract vocabularies from a text or markdown file:
+### Japanese Vocabulary
+
+Extract from a text or markdown file:
 ```bash
 make extract FILE=novel.md
 ```
 
-Ingest custom vocabulary from CSV files into the DB:
+Extract from direct text input:
+```bash
+make extract-text TEXT="日本語の文です"
+```
+
+### English Vocabulary
+
+Extract from a text or markdown file:
+```bash
+make extract-english FILE=article.md
+```
+
+Extract from direct text input:
+```bash
+make extract-english-text TEXT="The ephemeral nature of clouds"
+```
+
+### Ingest Custom Vocabulary
+
+Ingest CSV files into the DB:
 ```bash
 # Auto-detect format
 make ingest FILE=vocab.csv
@@ -98,7 +119,8 @@ isekai-dashboard/
 ├── db_init.py                   # Database schema + seed script
 ├── import_vocab.py              # Legacy CSV vocabulary importer
 ├── ingest_csv.py                # CSV vocabulary ingestion script
-├── vocab_extractor.py           # Vocabulary extraction from text files
+├── vocab_extractor.py           # Japanese vocabulary extraction from text/files
+├── english_vocab_extractor.py   # English vocabulary extraction from text/files
 ├── core/
 │   ├── db.py                    # SQLite connection manager
 │   ├── models.py                # Data classes (Quest, KanaCard, VocabCard, KanjiCard)
