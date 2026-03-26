@@ -128,6 +128,8 @@ class QuestTab(Container):
 class DailyQuests(Static):
     """Tabbed quest widget: Daily, Weekly, Goals."""
 
+    can_focus = True
+
     def compose(self) -> ComposeResult:
         yield Label("📜 [ クエスト ] QUESTS", classes="widget-title")
         with TabbedContent(id="quest-tabs"):

@@ -1,73 +1,121 @@
+import json
 import subprocess
 import os
 import logging
 
 logger = logging.getLogger(__name__)
 
+
 def get_media_browser() -> str:
     """Returns the configured media browser, defaulting to Brave Browser."""
     return os.environ.get("MEDIA_BROWSER", "Brave Browser")
 
-def get_current_track() -> str | None:
+
+def _clean_title(title: str) -> str:
+    return title.replace(" - YouTube Music", "").replace(" - YouTube", "")
+
+
+def get_all_youtube_tabs() -> list[dict]:
     """
-    Queries the configured browser via AppleScript to find a YouTube or YouTube Music tab.
-    Returns the title of the tab if found, otherwise None.
+    Discover all YouTube/YouTube Music tabs across all browser windows.
+    Returns list of dicts with keys: w, t, title, playing.
+    Window/tab indices are 1-based (AppleScript convention).
     """
     browser = get_media_browser()
-    
+
     script = f"""
     tell application "{browser}"
         if not (exists window 1) then return ""
+        set output to ""
+        set wIdx to 0
         repeat with w in windows
+            set wIdx to wIdx + 1
+            set tIdx to 0
             repeat with t in tabs of w
+                set tIdx to tIdx + 1
                 set u to URL of t
                 if u contains "youtube.com/watch" or u contains "music.youtube.com" then
-                    return title of t
+                    try
+                        set p to execute t javascript "document.querySelector('video').paused"
+                    on error
+                        set p to "true"
+                    end try
+                    set output to output & wIdx & "\t" & tIdx & "\t" & p & "\t" & (title of t) & linefeed
                 end if
             end repeat
         end repeat
-        return ""
+        return output
     end tell
     """
     try:
-        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
-        title = result.stdout.strip()
-        if title:
-            # Clean up the title a bit (remove " - YouTube" or " - YouTube Music")
-            title = title.replace(" - YouTube Music", "").replace(" - YouTube", "")
-            return title
-        return None
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error querying media track: {e}")
-        return None
+        result = subprocess.run(
+            ['osascript', '-e', script],
+            capture_output=True, text=True, check=True,
+        )
+        output = result.stdout.strip()
+        if not output:
+            return []
+        tabs = []
+        for line in output.split('\n'):
+            parts = line.split('\t', 3)
+            if len(parts) == 4:
+                tabs.append({
+                    'w': int(parts[0]),
+                    't': int(parts[1]),
+                    'playing': parts[2] == 'false',
+                    'title': _clean_title(parts[3]),
+                })
+        return tabs
     except Exception as e:
-        logger.error(f"Unexpected error in get_current_track: {e}")
-        return None
+        logger.debug(f"Could not get youtube tabs: {e}")
+        return []
 
-def get_playback_progress() -> tuple[float, float] | None:
-    """Return (current_time, duration) in seconds, or None if unavailable."""
+
+def get_current_track() -> str | None:
+    """Legacy single-tab lookup. Returns title of first YouTube tab found."""
+    tabs = get_all_youtube_tabs()
+    if tabs:
+        return tabs[0]['title']
+    return None
+
+
+def get_playback_progress(window: int = 0, tab: int = 0) -> tuple[float, float] | None:
+    """Return (current_time, duration) in seconds for a specific tab, or None."""
     browser = get_media_browser()
 
-    script = f"""
-    tell application "{browser}"
-        if not (exists window 1) then return ""
-        repeat with w in windows
-            repeat with t in tabs of w
-                set u to URL of t
-                if u contains "youtube.com/watch" or u contains "music.youtube.com" then
-                    set res to execute t javascript "JSON.stringify({{c: document.querySelector('video').currentTime, d: document.querySelector('video').duration}})"
-                    return res
-                end if
+    if window > 0 and tab > 0:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window {window}) then return ""
+            set t to tab {tab} of window {window}
+            set u to URL of t
+            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                set res to execute t javascript "JSON.stringify({{c: document.querySelector('video').currentTime, d: document.querySelector('video').duration}})"
+                return res
+            end if
+            return ""
+        end tell
+        """
+    else:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window 1) then return ""
+            repeat with w in windows
+                repeat with t in tabs of w
+                    set u to URL of t
+                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                        set res to execute t javascript "JSON.stringify({{c: document.querySelector('video').currentTime, d: document.querySelector('video').duration}})"
+                        return res
+                    end if
+                end repeat
             end repeat
-        end repeat
-        return ""
-    end tell
-    """
+            return ""
+        end tell
+        """
     try:
         result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
         output = result.stdout.strip()
         if output and output != "":
-            import json
             data = json.loads(output)
             current = float(data.get('c', 0))
             duration = float(data.get('d', 0))
@@ -78,29 +126,42 @@ def get_playback_progress() -> tuple[float, float] | None:
     return None
 
 
-def toggle_playback() -> bool:
+def toggle_playback(window: int = 0, tab: int = 0) -> bool:
     """
-    Injects JavaScript into the active YouTube/YouTube Music tab to toggle play/pause.
-    Requires 'Allow JavaScript from Apple Events' to be enabled in the browser's Developer menu.
-    Returns True if the command was sent successfully, False otherwise.
+    Toggle play/pause on a specific tab, or the first YouTube tab found.
+    Requires 'Allow JavaScript from Apple Events' in the browser's Developer menu.
     """
     browser = get_media_browser()
-    
-    script = f"""
-    tell application "{browser}"
-        if not (exists window 1) then return "No window"
-        repeat with w in windows
-            repeat with t in tabs of w
-                set u to URL of t
-                if u contains "youtube.com/watch" or u contains "music.youtube.com" then
-                    execute t javascript "document.querySelector('video').paused ? document.querySelector('video').play() : document.querySelector('video').pause()"
-                    return "Success"
-                end if
+
+    if window > 0 and tab > 0:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window {window}) then return "No window"
+            set t to tab {tab} of window {window}
+            set u to URL of t
+            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                execute t javascript "document.querySelector('video').paused ? document.querySelector('video').play() : document.querySelector('video').pause()"
+                return "Success"
+            end if
+            return "No tab found"
+        end tell
+        """
+    else:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window 1) then return "No window"
+            repeat with w in windows
+                repeat with t in tabs of w
+                    set u to URL of t
+                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                        execute t javascript "document.querySelector('video').paused ? document.querySelector('video').play() : document.querySelector('video').pause()"
+                        return "Success"
+                    end if
+                end repeat
             end repeat
-        end repeat
-        return "No tab found"
-    end tell
-    """
+            return "No tab found"
+        end tell
+        """
     try:
         result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
         output = result.stdout.strip()

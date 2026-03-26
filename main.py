@@ -52,12 +52,12 @@ class IsekaiDashboard(App):
 
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("f1", "focus_widget(0)", "Quests"),
-        ("f2", "focus_widget(1)", "Pomodoro"),
-        ("f3", "focus_widget(2)", "PRs"),
-        ("f4", "focus_widget(3)", "Calendar"),
-        ("f5", "focus_widget(4)", "SRS"),
-        ("f6", "focus_widget(5)", "Music"),
+        ("ctrl+1", "focus_widget(0)", "Quests"),
+        ("ctrl+2", "focus_widget(1)", "Pomodoro"),
+        ("ctrl+3", "focus_widget(2)", "PRs"),
+        ("ctrl+4", "focus_widget(3)", "Calendar"),
+        ("ctrl+5", "focus_widget(4)", "SRS"),
+        ("ctrl+6", "focus_widget(5)", "Music"),
         ("a", "quick_add_quest", "Add Quest"),
     ]
 
