@@ -3,7 +3,7 @@ import subprocess
 from datetime import datetime, timezone
 
 
-def fetch_open_prs(limit: int = 5) -> list[dict] | None:
+def fetch_open_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--author=@me', '--state=open',
@@ -13,12 +13,12 @@ def fetch_open_prs(limit: int = 5) -> list[dict] | None:
         prs = json.loads(result.stdout)
         for pr in prs:
             pr['_kind'] = 'authored'
-        return prs[:limit]
+        return prs
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None
 
 
-def fetch_review_requested_prs(limit: int = 5) -> list[dict] | None:
+def fetch_review_requested_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--review-requested=@me', '--state=open',
@@ -28,7 +28,7 @@ def fetch_review_requested_prs(limit: int = 5) -> list[dict] | None:
         prs = json.loads(result.stdout)
         for pr in prs:
             pr['_kind'] = 'review_requested'
-        return prs[:limit]
+        return prs
     except (FileNotFoundError, subprocess.CalledProcessError):
         return None
 
