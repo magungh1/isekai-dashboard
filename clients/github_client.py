@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 def fetch_open_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
-            ['gh', 'search', 'prs', '--author=@me', '--state=open',
+            ['gh', 'search', 'prs', '--author=@me', '--state=open', '--created', '2026-01-01..2026-12-31',
              '--json', 'title,number,repository,url,createdAt'],
             capture_output=True, text=True, check=True
         )
@@ -21,7 +21,7 @@ def fetch_open_prs() -> list[dict] | None:
 def fetch_review_requested_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
-            ['gh', 'search', 'prs', '--review-requested=@me', '--state=open',
+            ['gh', 'search', 'prs', '--review-requested=@me', '--state=open', '--created', '2026-01-01..2026-12-31',
              '--json', 'title,number,repository,url,createdAt'],
             capture_output=True, text=True, check=True
         )
@@ -36,7 +36,7 @@ def fetch_review_requested_prs() -> list[dict] | None:
 def fetch_assigned_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
-            ['gh', 'search', 'prs', '--assignee=@me', '--state=open',
+            ['gh', 'search', 'prs', '--assignee=@me', '--state=open', '--created', '2026-01-01..2026-12-31',
              '--json', 'title,number,repository,url,createdAt,author'],
             capture_output=True, text=True, check=True
         )

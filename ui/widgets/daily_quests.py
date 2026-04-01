@@ -152,6 +152,7 @@ class QuestTab(Container):
         quest = toggle_quest(quest_id)
         if quest.is_done:
             add_xp(XP_QUEST_COMPLETE, "quest")
+            delete_quest(quest_id)
             self.app.notify(
                 f"Quest complete! +{XP_QUEST_COMPLETE} XP ⚔️",
                 title="Quest",
