@@ -149,6 +149,9 @@ class PullRequests(Static):
                     timeout=10,
                 )
                 self._gh_notified = True
+            # Don't clear existing UI on transient fetch failures
+            if self._last_pr_keys:
+                return
 
         if (new_keys == self._last_pr_keys and self._last_pr_keys
                 and new_notif_ids == self._last_notif_ids):
