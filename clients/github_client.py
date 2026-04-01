@@ -33,6 +33,21 @@ def fetch_review_requested_prs() -> list[dict] | None:
         return None
 
 
+def fetch_assigned_prs() -> list[dict] | None:
+    try:
+        result = subprocess.run(
+            ['gh', 'search', 'prs', '--assignee=@me', '--state=open',
+             '--json', 'title,number,repository,url,createdAt,author'],
+            capture_output=True, text=True, check=True
+        )
+        prs = json.loads(result.stdout)
+        for pr in prs:
+            pr['_kind'] = 'assigned'
+        return prs
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+
 def approve_pr(repo_fullname: str, number: int) -> bool:
     try:
         subprocess.run(

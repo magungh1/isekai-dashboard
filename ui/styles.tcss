@@ -409,13 +409,24 @@ NowPlaying {
     height: auto;
 }
 
-#np-toggle {
+#np-controls {
     margin-top: 1;
     width: 100%;
+    height: auto;
+}
+
+.np-nav-btn {
+    width: 1fr;
     background: #00ffcc;
     color: #0D1117;
     border: none;
     text-style: bold;
+    height: 1;
+}
+
+.np-nav-btn:hover {
+    background: #00ffcc;
+    color: #0D1117;
 }
 
 /* SRS Stats */

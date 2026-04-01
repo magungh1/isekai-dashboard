@@ -176,3 +176,107 @@ def toggle_playback(window: int = 0, tab: int = 0) -> bool:
     except Exception as e:
         logger.error(f"Unexpected error in toggle_playback: {e}")
         return False
+
+
+def next_video(window: int = 0, tab: int = 0) -> bool:
+    """
+    Click YouTube's next video button on a specific tab.
+    Requires 'Allow JavaScript from Apple Events' in the browser's Developer menu.
+    """
+    browser = get_media_browser()
+
+    if window > 0 and tab > 0:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window {window}) then return "No window"
+            set t to tab {tab} of window {window}
+            set u to URL of t
+            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                execute t javascript "var btn = document.querySelector('.ytp-next-button'); if (btn) btn.click(); else throw 'No next button'"
+                return "Success"
+            end if
+            return "No tab found"
+        end tell
+        """
+    else:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window 1) then return "No window"
+            repeat with w in windows
+                repeat with t in tabs of w
+                    set u to URL of t
+                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                        execute t javascript "var btn = document.querySelector('.ytp-next-button'); if (btn) btn.click(); else throw 'No next button'"
+                        return "Success"
+                    end if
+                end repeat
+            end repeat
+            return "No tab found"
+        end tell
+        """
+    try:
+        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
+        output = result.stdout.strip()
+        if output == "Success":
+            return True
+        else:
+            logger.warning(f"Next video returned: {output}")
+            return False
+    except subprocess.CalledProcessError as e:
+        logger.debug(f"Could not go to next video (may be end of playlist): {e.stderr}")
+        return False
+    except Exception as e:
+        logger.debug(f"Unexpected error in next_video: {e}")
+        return False
+
+
+def previous_video(window: int = 0, tab: int = 0) -> bool:
+    """
+    Click YouTube's previous video button on a specific tab.
+    Requires 'Allow JavaScript from Apple Events' in the browser's Developer menu.
+    """
+    browser = get_media_browser()
+
+    if window > 0 and tab > 0:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window {window}) then return "No window"
+            set t to tab {tab} of window {window}
+            set u to URL of t
+            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                execute t javascript "var btn = document.querySelector('.ytp-prev-button'); if (btn) btn.click(); else throw 'No prev button'"
+                return "Success"
+            end if
+            return "No tab found"
+        end tell
+        """
+    else:
+        script = f"""
+        tell application "{browser}"
+            if not (exists window 1) then return "No window"
+            repeat with w in windows
+                repeat with t in tabs of w
+                    set u to URL of t
+                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                        execute t javascript "var btn = document.querySelector('.ytp-prev-button'); if (btn) btn.click(); else throw 'No prev button'"
+                        return "Success"
+                    end if
+                end repeat
+            end repeat
+            return "No tab found"
+        end tell
+        """
+    try:
+        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True)
+        output = result.stdout.strip()
+        if output == "Success":
+            return True
+        else:
+            logger.warning(f"Previous video returned: {output}")
+            return False
+    except subprocess.CalledProcessError as e:
+        logger.debug(f"Could not go to previous video: {e.stderr}")
+        return False
+    except Exception as e:
+        logger.debug(f"Unexpected error in previous_video: {e}")
+        return False
