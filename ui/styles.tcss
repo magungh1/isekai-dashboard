@@ -584,6 +584,15 @@ PRItem Horizontal Label {
     border: none;
 }
 
+.pr-merge-btn {
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    background: #8957e5;
+    color: #ffffff;
+    border: none;
+}
+
 .pr-close-btn {
     min-width: 3;
     max-width: 3;

@@ -92,6 +92,17 @@ def approve_pr(repo_fullname: str, number: int) -> bool:
         return False
 
 
+def merge_pr(repo_fullname: str, number: int) -> bool:
+    try:
+        subprocess.run(
+            ['gh', 'pr', 'merge', str(number), '--squash', '-R', repo_fullname],
+            capture_output=True, text=True, check=True
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
 def format_pr_age(created_at: str) -> str:
     try:
         created = datetime.fromisoformat(created_at.replace('Z', '+00:00'))

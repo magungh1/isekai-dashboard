@@ -5,8 +5,9 @@ from textual.widgets import Static, Label, ListView, ListItem, Button
 
 from clients.github_client import (
     fetch_open_prs, fetch_review_requested_prs, fetch_assigned_prs,
-    open_pr_in_browser, approve_pr, close_pr, format_pr_age, get_ci_status,
-    fetch_notifications, mark_notification_read, enrich_prs_with_review_status,
+    open_pr_in_browser, approve_pr, close_pr, merge_pr, format_pr_age,
+    get_ci_status, fetch_notifications, mark_notification_read,
+    enrich_prs_with_review_status,
 )
 
 
@@ -68,6 +69,9 @@ class PRItem(ListItem):
             )
             if kind == 'review_requested':
                 yield Button("✓", classes="pr-approve-btn")
+                yield Button("✕", classes="pr-close-btn")
+            elif self.pr.get('reviewDecision') == "APPROVED":
+                yield Button("⛙", classes="pr-merge-btn")
                 yield Button("✕", classes="pr-close-btn")
             else:
                 yield Button("✕", classes="pr-close-btn")
@@ -257,6 +261,8 @@ class PullRequests(Static):
         fullname = repo.get('nameWithOwner') or f"{repo.get('owner', {}).get('login', '')}/{repo['name']}"
         if "pr-approve-btn" in event.button.classes:
             self._do_approve(fullname, pr['number'])
+        elif "pr-merge-btn" in event.button.classes:
+            self._do_merge(fullname, pr['number'])
         elif "pr-close-btn" in event.button.classes:
             self._do_close(fullname, pr['number'])
         item.remove()
@@ -280,6 +286,18 @@ class PullRequests(Static):
         else:
             self.app.call_from_thread(
                 self.app.notify, f"Failed to approve PR #{number}", severity="error"
+            )
+
+    @work(thread=True)
+    def _do_merge(self, repo: str, number: int) -> None:
+        success = merge_pr(repo, number)
+        if success:
+            self.app.call_from_thread(
+                self.app.notify, f"Merged PR #{number}! ⛙", title="PR"
+            )
+        else:
+            self.app.call_from_thread(
+                self.app.notify, f"Failed to merge PR #{number}", severity="error"
             )
 
     @work(thread=True)
