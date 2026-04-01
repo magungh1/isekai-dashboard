@@ -7,6 +7,7 @@ from textual.widgets import Static, Label, ListView, ListItem, Button
 
 from clients.calendar_client import (
     fetch_today_events, get_event_time_status, get_next_meeting_countdown,
+    event_starts_within_minutes,
 )
 
 STATUS_CSS = {
@@ -40,6 +41,8 @@ class CalendarItem(ListItem):
 class Calendar(Static):
     """Fetches live events from macOS Calendar via icalBuddy."""
 
+    BINDINGS = []
+
     can_focus = True
 
     def compose(self) -> ComposeResult:
@@ -48,6 +51,7 @@ class Calendar(Static):
         yield ListView(id="cal-list")
 
     def on_mount(self) -> None:
+        self._notified_events: set[tuple[str, str]] = set()
         self.fetch_calendar()
         self.set_interval(120, self.fetch_calendar)
 
@@ -73,6 +77,19 @@ class Calendar(Static):
 
                 for event in events:
                     cal_list.append(CalendarItem(event))
+
+                now_notified = set()
+                for event in events:
+                    event_key = (event['title'], event.get('time', ''))
+                    if event_starts_within_minutes(event, 3) and event_key not in self._notified_events:
+                        self.app.notify(f"Meeting starting soon: {event['title']}", title="Calendar")
+                        now_notified.add(event_key)
+
+                if now_notified:
+                    self._notified_events.update(now_notified)
+
+                active_event_keys = {(e['title'], e.get('time', '')) for e in events}
+                self._notified_events = {k for k in self._notified_events if k in active_event_keys}
 
         self.app.call_from_thread(update_ui)
 

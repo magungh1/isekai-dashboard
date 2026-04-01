@@ -6,11 +6,18 @@ from textual.widgets import Static, Label, ListView, ListItem, Button
 from clients.github_client import (
     fetch_open_prs, fetch_review_requested_prs, fetch_assigned_prs,
     open_pr_in_browser, approve_pr, close_pr, format_pr_age, get_ci_status,
-    fetch_notifications, mark_notification_read,
+    fetch_notifications, mark_notification_read, enrich_prs_with_review_status,
 )
 
 
 CI_ICONS = {"pass": "✅", "fail": "❌", "pending": "🔄", "": ""}
+
+APPROVAL_ICONS = {
+    "APPROVED": "✅",
+    "CHANGES_REQUESTED": "🔴",
+    "REVIEW_REQUIRED": "👀",
+    "": "",
+}
 
 REASON_ICONS = {
     "comment": "💬",
@@ -38,20 +45,25 @@ class PRItem(ListItem):
 
         age = format_pr_age(self.pr.get('createdAt', ''))
         ci = CI_ICONS.get(get_ci_status(self.pr), "")
+        approval = APPROVAL_ICONS.get(self.pr.get('reviewDecision', ''), "")
 
         kind = self.pr.get('_kind', 'authored')
         if kind == 'review_requested':
             icon = "👀"
             css_class = "pr-needs-review"
+        elif self.pr.get('reviewDecision') == "APPROVED":
+            icon = "✅"
+            css_class = "pr-approved"
         else:
             icon = "🟡"
             css_class = "pr-review"
 
         age_str = f" {age}" if age else ""
         ci_str = f" {ci}" if ci else ""
+        approval_str = f" {approval}" if approval else ""
         with Horizontal():
             yield Label(
-                f"  {icon} \\[#{self.pr['number']}] {title} ({repo_name}){age_str}{ci_str}",
+                f"  {icon} \\[#{self.pr['number']}] {title} ({repo_name}){age_str}{ci_str}{approval_str}",
                 classes=css_class,
             )
             if kind == 'review_requested':
@@ -86,6 +98,8 @@ class NotificationItem(ListItem):
 class PullRequests(Static):
     """Fetches live GitHub PRs with interactive list."""
 
+    BINDINGS = []
+
     can_focus = True
 
     def compose(self) -> ComposeResult:
@@ -96,6 +110,7 @@ class PullRequests(Static):
         self._last_pr_keys: set[tuple] = set()
         self._last_notif_ids: set[str] = set()
         self._gh_notified = False
+        self._approved_prs: set[tuple] = set()
         self.fetch_prs()
         self.set_interval(5, self.fetch_prs)
 
@@ -105,6 +120,11 @@ class PullRequests(Static):
         review_prs = fetch_review_requested_prs()
         assigned_prs = fetch_assigned_prs()
         notifications = fetch_notifications()
+
+        # Enrich authored/assigned PRs with review status
+        all_prs = (my_prs or []) + (assigned_prs or [])
+        if all_prs:
+            enrich_prs_with_review_status(all_prs)
 
         new_keys = set()
         for pr in (review_prs or []):
@@ -131,6 +151,29 @@ class PullRequests(Static):
             return
         self._last_pr_keys = new_keys
         self._last_notif_ids = new_notif_ids
+
+        # Check for newly approved PRs
+        newly_approved = []
+        for pr in (my_prs or []) + (assigned_prs or []):
+            if pr.get('reviewDecision') == 'APPROVED':
+                pr_key = (pr['number'], pr['repository']['name'])
+                if pr_key not in self._approved_prs:
+                    newly_approved.append(pr)
+                    self._approved_prs.add(pr_key)
+
+        # Clean up approved PRs that are no longer in the list
+        current_pr_keys = {(pr['number'], pr['repository']['name']) for pr in (my_prs or []) + (assigned_prs or [])}
+        self._approved_prs = {k for k in self._approved_prs if k in current_pr_keys}
+
+        # Send notifications for newly approved PRs
+        for pr in newly_approved:
+            title = pr['title']
+            title_snippet = title[:50] + "..." if len(title) > 50 else title
+            self.app.call_from_thread(
+                self.app.notify,
+                f"PR #{pr['number']} approved! ✅\n{title_snippet}",
+                title="PR",
+            )
 
         def update_ui():
             pr_list = self.query_one("#pr-list", ListView)

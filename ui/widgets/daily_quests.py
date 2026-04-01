@@ -200,6 +200,8 @@ class QuestTab(Container):
 class DailyQuests(Static):
     """Tabbed quest widget: Daily, Weekly, Goals."""
 
+    BINDINGS = []
+
     can_focus = True
 
     def compose(self) -> ComposeResult:

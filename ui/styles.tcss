@@ -544,6 +544,11 @@ CalendarItem Horizontal Label {
     text-overflow: ellipsis;
 }
 
+.pr-approved {
+    color: #2ea043;
+    text-overflow: ellipsis;
+}
+
 /* PR age and CI status */
 .pr-age {
     color: #8b949e;
