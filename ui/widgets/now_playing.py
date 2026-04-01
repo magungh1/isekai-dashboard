@@ -1,10 +1,12 @@
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.widgets import Static, Label, Button, ProgressBar
 
 from clients.media_client import (
     get_all_youtube_tabs, get_playback_progress, toggle_playback,
+    next_video, previous_video,
 )
 
 
@@ -22,6 +24,8 @@ class NowPlaying(Static):
     BINDINGS = [
         Binding("n", "next_tab", "Next tab", show=False),
         Binding("p", "prev_tab", "Prev tab", show=False),
+        Binding("[", "prev_video", "Prev video", show=False),
+        Binding("]", "next_video", "Next video", show=False),
     ]
 
     def __init__(self, **kwargs) -> None:
@@ -37,7 +41,10 @@ class NowPlaying(Static):
         yield Label("No browser detected", id="np-browser", classes="kana-sub")
         yield ProgressBar(id="np-progress", total=100, show_eta=False, show_percentage=False)
         yield Label("", id="np-time", classes="kana-sub")
-        yield Button("⏯ Play / Pause", id="np-toggle")
+        with Horizontal(id="np-controls"):
+            yield Button("⏮ Prev", id="np-prev", classes="np-nav-btn")
+            yield Button("⏯ Play/Pause", id="np-toggle", classes="np-nav-btn")
+            yield Button("⏭ Next", id="np-next", classes="np-nav-btn")
 
     def on_mount(self) -> None:
         from clients.media_client import get_media_browser
@@ -118,6 +125,16 @@ class NowPlaying(Static):
                 self.toggle_media()
             else:
                 self.app.notify("No active media tab found.", severity="warning")
+        elif event.button.id == "np-prev":
+            if self._tabs:
+                self.prev_media()
+            else:
+                self.app.notify("No active media tab found.", severity="warning")
+        elif event.button.id == "np-next":
+            if self._tabs:
+                self.next_media()
+            else:
+                self.app.notify("No active media tab found.", severity="warning")
 
     @work(thread=True)
     def toggle_media(self) -> None:
@@ -147,3 +164,39 @@ class NowPlaying(Static):
             self._user_selected = True
             self._active_idx = (self._active_idx - 1) % len(self._tabs)
             self.update_track_info()
+
+    @work(thread=True)
+    def prev_media(self) -> None:
+        if self._tabs and self._active_idx < len(self._tabs):
+            tab = self._tabs[self._active_idx]
+            success = previous_video(tab['w'], tab['t'])
+            if not success:
+                self.app.call_from_thread(
+                    self.app.notify,
+                    "Could not go to previous video. May not be in a playlist.",
+                    severity="warning",
+                )
+
+    @work(thread=True)
+    def next_media(self) -> None:
+        if self._tabs and self._active_idx < len(self._tabs):
+            tab = self._tabs[self._active_idx]
+            success = next_video(tab['w'], tab['t'])
+            if not success:
+                self.app.call_from_thread(
+                    self.app.notify,
+                    "Could not go to next video. May be end of playlist.",
+                    severity="warning",
+                )
+
+    def action_prev_video(self) -> None:
+        if self._tabs:
+            self.prev_media()
+        else:
+            self.app.notify("No active media tab found.", severity="warning")
+
+    def action_next_video(self) -> None:
+        if self._tabs:
+            self.next_media()
+        else:
+            self.app.notify("No active media tab found.", severity="warning")

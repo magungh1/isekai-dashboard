@@ -4,7 +4,7 @@ from textual.containers import Horizontal
 from textual.widgets import Static, Label, ListView, ListItem, Button
 
 from clients.github_client import (
-    fetch_open_prs, fetch_review_requested_prs,
+    fetch_open_prs, fetch_review_requested_prs, fetch_assigned_prs,
     open_pr_in_browser, approve_pr, close_pr, format_pr_age, get_ci_status,
     fetch_notifications, mark_notification_read,
 )
@@ -95,13 +95,15 @@ class PullRequests(Static):
     def on_mount(self) -> None:
         self._last_pr_keys: set[tuple] = set()
         self._last_notif_ids: set[str] = set()
+        self._gh_notified = False
         self.fetch_prs()
-        self.set_interval(10, self.fetch_prs)
+        self.set_interval(5, self.fetch_prs)
 
     @work(thread=True)
     def fetch_prs(self) -> None:
         my_prs = fetch_open_prs()
         review_prs = fetch_review_requested_prs()
+        assigned_prs = fetch_assigned_prs()
         notifications = fetch_notifications()
 
         new_keys = set()
@@ -109,8 +111,20 @@ class PullRequests(Static):
             new_keys.add((pr['number'], pr['repository']['name'], 'review_requested'))
         for pr in (my_prs or []):
             new_keys.add((pr['number'], pr['repository']['name'], 'authored'))
+        for pr in (assigned_prs or []):
+            new_keys.add((pr['number'], pr['repository']['name'], 'assigned'))
 
         new_notif_ids = {n['id'] for n in (notifications or [])}
+
+        if my_prs is None and review_prs is None and assigned_prs is None:
+            if not self._gh_notified:
+                self.app.call_from_thread(
+                    self.app.notify,
+                    "GitHub CLI not available. Install from https://cli.github.com/",
+                    severity="error",
+                    timeout=10,
+                )
+                self._gh_notified = True
 
         if (new_keys == self._last_pr_keys and self._last_pr_keys
                 and new_notif_ids == self._last_notif_ids):
@@ -124,7 +138,7 @@ class PullRequests(Static):
 
             title_label = self.query_one("#pr-title", Label)
 
-            if my_prs is None and review_prs is None:
+            if my_prs is None and review_prs is None and assigned_prs is None and notifications is None:
                 pr_list.append(ListItem(Label("❌ GitHub CLI not available", classes="pr-failed")))
                 title_label.update("⚔️ [ 通信網 ] PULL REQUESTS")
                 return
@@ -152,10 +166,12 @@ class PullRequests(Static):
                     pr_list.append(PRItem(pr))
                 has_items = True
 
-            if my_prs:
-                if has_items:
-                    pr_list.append(ListItem(Label("  MY PULL REQUESTS", classes="pr-section-header")))
-                for pr in my_prs:
+            my_assigned_prs = (my_prs or []) + (assigned_prs or [])
+            my_assigned_prs = {pr['number']: pr for pr in my_assigned_prs}.values()
+
+            if my_assigned_prs:
+                pr_list.append(ListItem(Label("  MY PULL REQUESTS & ASSIGNED", classes="pr-section-header")))
+                for pr in my_assigned_prs:
                     pr_list.append(PRItem(pr))
                 has_items = True
 
