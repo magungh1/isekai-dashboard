@@ -115,6 +115,7 @@ class PullRequests(Static):
         self._last_notif_ids: set[str] = set()
         self._gh_notified = False
         self._approved_prs: set[tuple] = set()
+        self._hidden_prs: set[tuple] = set()
         self.fetch_prs()
         self.set_interval(5, self.fetch_prs)
 
@@ -168,9 +169,10 @@ class PullRequests(Static):
                     newly_approved.append(pr)
                     self._approved_prs.add(pr_key)
 
-        # Clean up approved PRs that are no longer in the list
+        # Clean up approved/hidden PRs that are no longer in the list
         current_pr_keys = {(pr['number'], pr['repository']['name']) for pr in (my_prs or []) + (assigned_prs or [])}
         self._approved_prs = {k for k in self._approved_prs if k in current_pr_keys}
+        self._hidden_prs = {k for k in self._hidden_prs if k in current_pr_keys}
 
         # Send notifications for newly approved PRs
         for pr in newly_approved:
@@ -210,18 +212,22 @@ class PullRequests(Static):
             else:
                 title_label.update("⚔️ [ 通信網 ] PULL REQUESTS")
 
-            if review_prs:
+            visible_review = [pr for pr in (review_prs or [])
+                              if (pr['number'], pr['repository']['name']) not in self._hidden_prs]
+            if visible_review:
                 pr_list.append(ListItem(Label("  NEEDS YOUR REVIEW", classes="pr-section-header")))
-                for pr in review_prs:
+                for pr in visible_review:
                     pr_list.append(PRItem(pr))
                 has_items = True
 
             my_assigned_prs = (my_prs or []) + (assigned_prs or [])
             my_assigned_prs = {pr['number']: pr for pr in my_assigned_prs}.values()
+            visible_my = [pr for pr in my_assigned_prs
+                          if (pr['number'], pr['repository']['name']) not in self._hidden_prs]
 
-            if my_assigned_prs:
+            if visible_my:
                 pr_list.append(ListItem(Label("  MY PULL REQUESTS & ASSIGNED", classes="pr-section-header")))
-                for pr in my_assigned_prs:
+                for pr in visible_my:
                     pr_list.append(PRItem(pr))
                 has_items = True
 
@@ -266,10 +272,11 @@ class PullRequests(Static):
             self._do_approve(fullname, pr['number'])
         elif "pr-merge-btn" in event.button.classes:
             self._do_merge(fullname, pr['number'])
+            self._hidden_prs.add((pr['number'], pr['repository']['name']))
         elif "pr-close-btn" in event.button.classes:
             self._do_close(fullname, pr['number'])
+            self._hidden_prs.add((pr['number'], pr['repository']['name']))
         item.remove()
-        self._last_pr_keys.discard((pr['number'], pr['repository']['name'], pr.get('_kind', 'authored')))
 
     @work(thread=True)
     def _do_mark_read(self, thread_id: str) -> None:
