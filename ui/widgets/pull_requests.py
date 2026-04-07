@@ -109,6 +109,7 @@ class PullRequests(Static):
     def compose(self) -> ComposeResult:
         yield Label("⚔️ [ 通信網 ] PULL REQUESTS", id="pr-title", classes="widget-title")
         yield ListView(id="pr-list")
+        yield Button("🔄", id="pr-refresh-btn", classes="pr-refresh-btn")
 
     def on_mount(self) -> None:
         self._last_pr_keys: set[tuple] = set()
@@ -117,9 +118,8 @@ class PullRequests(Static):
         self._approved_prs: set[tuple] = set()
         self._hidden_prs: set[tuple] = set()
         self.fetch_prs()
-        self.set_interval(5, self.fetch_prs)
 
-    @work(thread=True)
+    @work(thread=True, exclusive=True)
     def fetch_prs(self) -> None:
         my_prs = fetch_open_prs()
         review_prs = fetch_review_requested_prs()
@@ -248,6 +248,21 @@ class PullRequests(Static):
             self._last_notif_ids.discard(notif['id'])
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "pr-refresh-btn":
+            self._last_pr_keys = set()
+            self._last_notif_ids = set()
+            
+            # Visual feedback
+            pr_list = self.query_one("#pr-list", ListView)
+            pr_list.clear()
+            pr_list.append(ListItem(Label("⏳ Fetching PRs...", classes="pr-merged")))
+            
+            title_label = self.query_one("#pr-title", Label)
+            title_label.update("⚔️ [ 通信網 ] PULL REQUESTS")
+            
+            self.fetch_prs()
+            return
+
         # Handle notification dismiss
         if "notif-dismiss-btn" in event.button.classes:
             item = event.button.parent
