@@ -251,15 +251,6 @@ class PullRequests(Static):
         if event.button.id == "pr-refresh-btn":
             self._last_pr_keys = set()
             self._last_notif_ids = set()
-            
-            # Visual feedback
-            pr_list = self.query_one("#pr-list", ListView)
-            pr_list.clear()
-            pr_list.append(ListItem(Label("⏳ Fetching PRs...", classes="pr-merged")))
-            
-            title_label = self.query_one("#pr-title", Label)
-            title_label.update("⚔️ [ 通信網 ] PULL REQUESTS")
-            
             self.fetch_prs()
             return
 
