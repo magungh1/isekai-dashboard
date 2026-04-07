@@ -544,6 +544,11 @@ CalendarItem Horizontal Label {
     text-overflow: ellipsis;
 }
 
+.pr-approved {
+    color: #2ea043;
+    text-overflow: ellipsis;
+}
+
 /* PR age and CI status */
 .pr-age {
     color: #8b949e;
@@ -575,6 +580,15 @@ PRItem Horizontal Label {
     max-width: 3;
     height: 1;
     background: #238636;
+    color: #ffffff;
+    border: none;
+}
+
+.pr-merge-btn {
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    background: #8957e5;
     color: #ffffff;
     border: none;
 }

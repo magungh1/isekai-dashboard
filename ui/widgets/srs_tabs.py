@@ -26,8 +26,8 @@ class SRSTabs(Static):
     """Tabbed container for Katakana, Hiragana, English, Kanji SRS flashcards, and Stats."""
 
     BINDINGS = [
-        Binding("bracketleft", "prev_tab", "Prev Tab", show=False),
-        Binding("bracketright", "next_tab", "Next Tab", show=False),
+        Binding("[", "prev_tab", "[ Prev Tab", show=True),
+        Binding("]", "next_tab", "] Next Tab", show=True),
     ]
 
     can_focus = True

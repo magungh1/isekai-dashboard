@@ -3,15 +3,11 @@ from datetime import datetime, timedelta
 
 from core.db import get_shared_connection, db_lock
 from core.models import KanaCard
+from config import get
 
 # SRS intervals in hours per level
 SRS_INTERVALS = {
-    0: 0,       # new — review immediately
-    1: 4,       # 4 hours
-    2: 24,      # 1 day
-    3: 72,      # 3 days
-    4: 168,     # 1 week
-    5: 720,     # 1 month
+    i: v for i, v in enumerate(get("srs", "intervals", [0, 4, 24, 72, 168, 720]))
 }
 
 
@@ -21,12 +17,12 @@ def get_due_cards(limit: int = 10, kana_type: str | None = None) -> list[KanaCar
         now = datetime.now().isoformat()
         if kana_type:
             rows = conn.execute(
-                'SELECT * FROM kana_srs WHERE next_review <= ? AND type = ? ORDER BY level ASC, next_review ASC LIMIT ?',
+                'SELECT * FROM kana_srs WHERE next_review <= ? AND type = ? ORDER BY level ASC, RANDOM() LIMIT ?',
                 (now, kana_type, limit)
             ).fetchall()
         else:
             rows = conn.execute(
-                'SELECT * FROM kana_srs WHERE next_review <= ? ORDER BY level ASC, next_review ASC LIMIT ?',
+                'SELECT * FROM kana_srs WHERE next_review <= ? ORDER BY level ASC, RANDOM() LIMIT ?',
                 (now, limit)
             ).fetchall()
         cards = [KanaCard(**dict(row)) for row in rows]
@@ -81,11 +77,11 @@ def get_stats(kana_type: str | None = None) -> dict:
         if kana_type:
             total = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE type = ?', (kana_type,)).fetchone()[0]
             due = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE next_review <= ? AND type = ?', (now, kana_type)).fetchone()[0]
-            mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= 4 AND type = ?', (kana_type,)).fetchone()[0]
+            mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= ? AND type = ?', (get("srs", "mastery_level", 4), kana_type)).fetchone()[0]
         else:
             total = conn.execute('SELECT COUNT(*) FROM kana_srs').fetchone()[0]
             due = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE next_review <= ?', (now,)).fetchone()[0]
-            mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= 4').fetchone()[0]
+            mastered = conn.execute('SELECT COUNT(*) FROM kana_srs WHERE level >= ?', (get("srs", "mastery_level", 4),)).fetchone()[0]
         return {'total': total, 'due': due, 'mastered': mastered}
 
 

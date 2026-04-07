@@ -19,14 +19,15 @@ def _format_duration(seconds: float) -> str:
 class NowPlaying(Static):
     """Displays current media from browser and allows play/pause."""
 
-    can_focus = True
-
     BINDINGS = [
-        Binding("n", "next_tab", "Next tab", show=False),
-        Binding("p", "prev_tab", "Prev tab", show=False),
-        Binding("[", "prev_video", "Prev video", show=False),
-        Binding("]", "next_video", "Next video", show=False),
+        Binding("p", "prev_video", "p: Prev", show=True),
+        Binding("space", "toggle_playback", "Space: Play/Pause", show=True),
+        Binding("n", "next_video", "n: Next", show=True),
+        Binding("[", "prev_tab", "[ Prev tab", show=False),
+        Binding("]", "next_tab", "] Next tab", show=False),
     ]
+
+    can_focus = True
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -152,6 +153,12 @@ class NowPlaying(Static):
                 f"is enabled in {browser}.",
                 severity="error",
             )
+
+    def action_toggle_playback(self) -> None:
+        if self._tabs:
+            self.toggle_media()
+        else:
+            self.app.notify("No active media tab found.", severity="warning")
 
     def action_next_tab(self) -> None:
         if len(self._tabs) > 1:

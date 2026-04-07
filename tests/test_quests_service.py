@@ -82,7 +82,7 @@ def test_reset_daily_quests():
     assert daily[0].status == "pending"
 
     # Weekly should remain done
-    weekly = get_quests_by_category("weekly")
+    weekly = get_quests_by_category("weekly", include_done=True)
     assert weekly[0].status == "done"
 
 
@@ -102,7 +102,7 @@ def test_reset_weekly_quests():
     assert weekly[0].status == "pending"
 
     # Daily should remain done
-    daily = get_quests_by_category("daily")
+    daily = get_quests_by_category("daily", include_done=True)
     assert daily[0].status == "done"
 
 
@@ -118,5 +118,5 @@ def test_reset_daily_no_double_reset():
 
     reset_daily_quests()  # Second reset — should be a no-op
 
-    daily = get_quests_by_category("daily")
+    daily = get_quests_by_category("daily", include_done=True)
     assert daily[0].status == "done"

@@ -5,12 +5,20 @@ from textual.widgets import Static, Label, ListView, ListItem, Button
 
 from clients.github_client import (
     fetch_open_prs, fetch_review_requested_prs, fetch_assigned_prs,
-    open_pr_in_browser, approve_pr, close_pr, format_pr_age, get_ci_status,
-    fetch_notifications, mark_notification_read,
+    open_pr_in_browser, approve_pr, close_pr, merge_pr, format_pr_age,
+    get_ci_status, fetch_notifications, mark_notification_read,
+    enrich_prs_with_review_status,
 )
 
 
 CI_ICONS = {"pass": "✅", "fail": "❌", "pending": "🔄", "": ""}
+
+APPROVAL_ICONS = {
+    "APPROVED": "✅",
+    "CHANGES_REQUESTED": "🔴",
+    "REVIEW_REQUIRED": "👀",
+    "": "",
+}
 
 REASON_ICONS = {
     "comment": "💬",
@@ -38,24 +46,32 @@ class PRItem(ListItem):
 
         age = format_pr_age(self.pr.get('createdAt', ''))
         ci = CI_ICONS.get(get_ci_status(self.pr), "")
+        approval = APPROVAL_ICONS.get(self.pr.get('reviewDecision', ''), "")
 
         kind = self.pr.get('_kind', 'authored')
         if kind == 'review_requested':
             icon = "👀"
             css_class = "pr-needs-review"
+        elif self.pr.get('reviewDecision') == "APPROVED":
+            icon = "✅"
+            css_class = "pr-approved"
         else:
             icon = "🟡"
             css_class = "pr-review"
 
         age_str = f" {age}" if age else ""
         ci_str = f" {ci}" if ci else ""
+        approval_str = f" {approval}" if approval else ""
         with Horizontal():
             yield Label(
-                f"  {icon} \\[#{self.pr['number']}] {title} ({repo_name}){age_str}{ci_str}",
+                f"  {icon} \\[#{self.pr['number']}] {title} ({repo_name}){age_str}{ci_str}{approval_str}",
                 classes=css_class,
             )
             if kind == 'review_requested':
                 yield Button("✓", classes="pr-approve-btn")
+                yield Button("✕", classes="pr-close-btn")
+            elif self.pr.get('reviewDecision') == "APPROVED":
+                yield Button("⛙", classes="pr-merge-btn")
                 yield Button("✕", classes="pr-close-btn")
             else:
                 yield Button("✕", classes="pr-close-btn")
@@ -86,6 +102,8 @@ class NotificationItem(ListItem):
 class PullRequests(Static):
     """Fetches live GitHub PRs with interactive list."""
 
+    BINDINGS = []
+
     can_focus = True
 
     def compose(self) -> ComposeResult:
@@ -96,6 +114,8 @@ class PullRequests(Static):
         self._last_pr_keys: set[tuple] = set()
         self._last_notif_ids: set[str] = set()
         self._gh_notified = False
+        self._approved_prs: set[tuple] = set()
+        self._hidden_prs: set[tuple] = set()
         self.fetch_prs()
         self.set_interval(5, self.fetch_prs)
 
@@ -105,6 +125,11 @@ class PullRequests(Static):
         review_prs = fetch_review_requested_prs()
         assigned_prs = fetch_assigned_prs()
         notifications = fetch_notifications()
+
+        # Enrich authored/assigned PRs with review status
+        all_prs = (my_prs or []) + (assigned_prs or [])
+        if all_prs:
+            enrich_prs_with_review_status(all_prs)
 
         new_keys = set()
         for pr in (review_prs or []):
@@ -125,12 +150,39 @@ class PullRequests(Static):
                     timeout=10,
                 )
                 self._gh_notified = True
+            # Don't clear existing UI on transient fetch failures
+            if self._last_pr_keys:
+                return
 
         if (new_keys == self._last_pr_keys and self._last_pr_keys
                 and new_notif_ids == self._last_notif_ids):
             return
         self._last_pr_keys = new_keys
         self._last_notif_ids = new_notif_ids
+
+        # Check for newly approved PRs
+        newly_approved = []
+        for pr in (my_prs or []) + (assigned_prs or []):
+            if pr.get('reviewDecision') == 'APPROVED':
+                pr_key = (pr['number'], pr['repository']['name'])
+                if pr_key not in self._approved_prs:
+                    newly_approved.append(pr)
+                    self._approved_prs.add(pr_key)
+
+        # Clean up approved/hidden PRs that are no longer in the list
+        current_pr_keys = {(pr['number'], pr['repository']['name']) for pr in (my_prs or []) + (assigned_prs or [])}
+        self._approved_prs = {k for k in self._approved_prs if k in current_pr_keys}
+        self._hidden_prs = {k for k in self._hidden_prs if k in current_pr_keys}
+
+        # Send notifications for newly approved PRs
+        for pr in newly_approved:
+            title = pr['title']
+            title_snippet = title[:50] + "..." if len(title) > 50 else title
+            self.app.call_from_thread(
+                self.app.notify,
+                f"PR #{pr['number']} approved! ✅\n{title_snippet}",
+                title="PR",
+            )
 
         def update_ui():
             pr_list = self.query_one("#pr-list", ListView)
@@ -160,18 +212,22 @@ class PullRequests(Static):
             else:
                 title_label.update("⚔️ [ 通信網 ] PULL REQUESTS")
 
-            if review_prs:
+            visible_review = [pr for pr in (review_prs or [])
+                              if (pr['number'], pr['repository']['name']) not in self._hidden_prs]
+            if visible_review:
                 pr_list.append(ListItem(Label("  NEEDS YOUR REVIEW", classes="pr-section-header")))
-                for pr in review_prs:
+                for pr in visible_review:
                     pr_list.append(PRItem(pr))
                 has_items = True
 
             my_assigned_prs = (my_prs or []) + (assigned_prs or [])
             my_assigned_prs = {pr['number']: pr for pr in my_assigned_prs}.values()
+            visible_my = [pr for pr in my_assigned_prs
+                          if (pr['number'], pr['repository']['name']) not in self._hidden_prs]
 
-            if my_assigned_prs:
+            if visible_my:
                 pr_list.append(ListItem(Label("  MY PULL REQUESTS & ASSIGNED", classes="pr-section-header")))
-                for pr in my_assigned_prs:
+                for pr in visible_my:
                     pr_list.append(PRItem(pr))
                 has_items = True
 
@@ -214,10 +270,13 @@ class PullRequests(Static):
         fullname = repo.get('nameWithOwner') or f"{repo.get('owner', {}).get('login', '')}/{repo['name']}"
         if "pr-approve-btn" in event.button.classes:
             self._do_approve(fullname, pr['number'])
+        elif "pr-merge-btn" in event.button.classes:
+            self._do_merge(fullname, pr['number'])
+            self._hidden_prs.add((pr['number'], pr['repository']['name']))
         elif "pr-close-btn" in event.button.classes:
             self._do_close(fullname, pr['number'])
+            self._hidden_prs.add((pr['number'], pr['repository']['name']))
         item.remove()
-        self._last_pr_keys.discard((pr['number'], pr['repository']['name'], pr.get('_kind', 'authored')))
 
     @work(thread=True)
     def _do_mark_read(self, thread_id: str) -> None:
@@ -237,6 +296,18 @@ class PullRequests(Static):
         else:
             self.app.call_from_thread(
                 self.app.notify, f"Failed to approve PR #{number}", severity="error"
+            )
+
+    @work(thread=True)
+    def _do_merge(self, repo: str, number: int) -> None:
+        success = merge_pr(repo, number)
+        if success:
+            self.app.call_from_thread(
+                self.app.notify, f"Merged PR #{number}! ⛙", title="PR"
+            )
+        else:
+            self.app.call_from_thread(
+                self.app.notify, f"Failed to merge PR #{number}", severity="error"
             )
 
     @work(thread=True)

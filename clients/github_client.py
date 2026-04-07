@@ -1,12 +1,21 @@
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+PR_MAX_AGE_DAYS = 90
+
+
+def _created_after() -> str:
+    """Return ISO date string for PR_MAX_AGE_DAYS ago (for --created flag)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=PR_MAX_AGE_DAYS)
+    return f">={cutoff.strftime('%Y-%m-%d')}"
 
 
 def fetch_open_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--author=@me', '--state=open',
+             '--created', _created_after(),
              '--json', 'title,number,repository,url,createdAt'],
             capture_output=True, text=True, check=True
         )
@@ -22,6 +31,7 @@ def fetch_review_requested_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--review-requested=@me', '--state=open',
+             '--created', _created_after(),
              '--json', 'title,number,repository,url,createdAt'],
             capture_output=True, text=True, check=True
         )
@@ -37,6 +47,7 @@ def fetch_assigned_prs() -> list[dict] | None:
     try:
         result = subprocess.run(
             ['gh', 'search', 'prs', '--assignee=@me', '--state=open',
+             '--created', _created_after(),
              '--json', 'title,number,repository,url,createdAt,author'],
             capture_output=True, text=True, check=True
         )
@@ -48,10 +59,43 @@ def fetch_assigned_prs() -> list[dict] | None:
         return None
 
 
+def fetch_review_decision(repo_fullname: str, number: int) -> str:
+    """Fetch reviewDecision for a single PR via gh pr view."""
+    try:
+        result = subprocess.run(
+            ['gh', 'pr', 'view', str(number), '-R', repo_fullname,
+             '--json', 'reviewDecision'],
+            capture_output=True, text=True, check=True
+        )
+        data = json.loads(result.stdout)
+        return data.get('reviewDecision', '')
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return ''
+
+
+def enrich_prs_with_review_status(prs: list[dict]) -> None:
+    """Add reviewDecision to each PR by querying gh pr view."""
+    for pr in prs:
+        repo = pr.get('repository', {})
+        fullname = repo.get('nameWithOwner') or f"{repo.get('owner', {}).get('login', '')}/{repo['name']}"
+        pr['reviewDecision'] = fetch_review_decision(fullname, pr['number'])
+
+
 def approve_pr(repo_fullname: str, number: int) -> bool:
     try:
         subprocess.run(
             ['gh', 'pr', 'review', str(number), '--approve', '-R', repo_fullname],
+            capture_output=True, text=True, check=True
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
+def merge_pr(repo_fullname: str, number: int) -> bool:
+    try:
+        subprocess.run(
+            ['gh', 'pr', 'merge', str(number), '--squash', '-R', repo_fullname],
             capture_output=True, text=True, check=True
         )
         return True

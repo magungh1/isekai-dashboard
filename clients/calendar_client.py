@@ -41,7 +41,7 @@ def parse_time_range(time_str: str | None) -> tuple[datetime | None, datetime | 
 def get_event_time_status(time_str: str | None) -> str:
     """Return time status: 'now', 'soon' (within 30min), 'past', or 'future'."""
     start, end = parse_time_range(time_str)
-    if start is None:
+    if start is None or end is None:
         return "future"
     now = datetime.now()
     if start <= now <= end:
@@ -52,6 +52,16 @@ def get_event_time_status(time_str: str | None) -> str:
     if minutes_until <= 30:
         return "soon"
     return "future"
+
+
+def event_starts_within_minutes(event: dict, minutes: int) -> bool:
+    """Check if an event starts within the specified minutes from now."""
+    start, _ = parse_time_range(event.get('time'))
+    if start is None:
+        return False
+    now = datetime.now()
+    minutes_until = (start - now).total_seconds() / 60
+    return 0 <= minutes_until <= minutes
 
 
 def get_next_meeting_countdown(events: list[dict]) -> str | None:

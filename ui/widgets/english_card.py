@@ -17,11 +17,11 @@ class EnglishVocab(Static):
     """SRS flashcard widget for advanced English vocabulary."""
 
     BINDINGS = [
-        Binding("space", "flip_card", "Flip Card", show=True),
-        Binding("1", "rate_again", "Again", show=False),
-        Binding("2", "rate_hard", "Hard", show=False),
-        Binding("3", "rate_good", "Good", show=False),
-        Binding("4", "rate_easy", "Easy", show=False),
+        Binding("space", "flip_card", "Space: Flip", show=True),
+        Binding("1", "rate_again", "1: Again", show=True),
+        Binding("2", "rate_hard", "2: Hard", show=True),
+        Binding("3", "rate_good", "3: Good", show=True),
+        Binding("4", "rate_easy", "4: Easy", show=True),
     ]
 
     can_focus = True

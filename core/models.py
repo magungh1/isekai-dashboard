@@ -10,6 +10,7 @@ class Quest:
     created_at: str
     category: str = 'daily'  # 'daily', 'weekly', 'goals'
     deadline: str | None = None
+    sort_order: int = 0
 
     @property
     def is_done(self) -> bool:

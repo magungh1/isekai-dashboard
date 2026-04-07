@@ -1,13 +1,14 @@
 import logging
 
 from textual import events, work
+from textual.message import Message
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.widgets import Static, Label, ListView, ListItem, Input, TabbedContent, TabPane, Button
 
 from services.quests_service import (
     get_quests_by_category, add_quest, toggle_quest, delete_quest,
-    update_quest, reset_daily_quests, reset_weekly_quests,
+    update_quest, reset_daily_quests, reset_weekly_quests, update_quests_order
 )
 from services.xp_service import add_xp, XP_QUEST_COMPLETE
 from core.models import Quest
@@ -25,10 +26,24 @@ CATEGORY_COLORS = {
 class QuestItem(ListItem):
     """A single quest item in the list."""
 
+    class DragStart(Message):
+        def __init__(self, item: "QuestItem", start_y: int) -> None:
+            self.item = item
+            self.start_y = start_y
+            super().__init__()
+
+    class DragEnd(Message):
+        def __init__(self, item: "QuestItem", end_x: int, end_y: int) -> None:
+            self.item = item
+            self.end_x = end_x
+            self.end_y = end_y
+            super().__init__()
+
     def __init__(self, quest: Quest) -> None:
         super().__init__()
         self.quest = quest
         self._editing = False
+        self._is_dragging = False
 
     def compose(self) -> ComposeResult:
         toggle_label = "[x]" if self.quest.is_done else "[ ]"
@@ -65,6 +80,19 @@ class QuestItem(ListItem):
         self._editing = False
         self.query_one(".quest-display", Horizontal).display = True
         self.query_one(".quest-edit-input", Input).display = False
+
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        if event.button == 1 and not self._editing:
+            self._is_dragging = True
+            self.capture_mouse()
+            self.post_message(self.DragStart(self, event.screen_y))
+
+    def on_mouse_up(self, event: events.MouseUp) -> None:
+        if event.button == 1 and self._is_dragging:
+            self._is_dragging = False
+            self.release_mouse()
+            self.post_message(self.DragEnd(self, event.screen_x, event.screen_y))
+
 
 
 class QuestTab(Container):
@@ -196,9 +224,58 @@ class QuestTab(Container):
         add_quest(title, category=self._category, deadline=deadline)
         self._deferred_load()
 
+    def on_quest_item_drag_start(self, event: QuestItem.DragStart) -> None:
+        event.item.add_class("dragging-quest")
+
+    def on_quest_item_drag_end(self, event: QuestItem.DragEnd) -> None:
+        event.item.remove_class("dragging-quest")
+        try:
+            widget_at_drop = self.app.get_widget_at(event.end_x, event.end_y)
+        except Exception:
+            return
+
+        if isinstance(widget_at_drop, tuple) and len(widget_at_drop) > 0:
+            target_item = widget_at_drop[0]
+        else:
+            target_item = widget_at_drop
+
+        while target_item and not isinstance(target_item, QuestItem):
+            target_item = target_item.parent
+        
+        if not target_item or not isinstance(target_item, QuestItem) or target_item is event.item:
+            return
+
+        # Both items must be in the same tab/list
+        if target_item.quest.category != event.item.quest.category:
+            return
+
+        list_view = self.query_one(f"#quest-list-{self._category}", ListView)
+        current_items = [child for child in list_view.children if isinstance(child, QuestItem)]
+        
+        try:
+            old_idx = current_items.index(event.item)
+            new_idx = current_items.index(target_item)
+        except ValueError:
+            return
+
+        # Reorder list
+        item_to_move = current_items.pop(old_idx)
+        current_items.insert(new_idx, item_to_move)
+
+        # Update sort_order in DB for all items in this category
+        updates = []
+        for i, child in enumerate(current_items):
+            updates.append((child.quest.id, i))
+        
+        update_quests_order(updates)
+        self._deferred_load()
+
+
 
 class DailyQuests(Static):
     """Tabbed quest widget: Daily, Weekly, Goals."""
+
+    BINDINGS = []
 
     can_focus = True
 

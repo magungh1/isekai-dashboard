@@ -3,15 +3,11 @@ from datetime import datetime, timedelta
 
 from core.db import get_shared_connection, db_lock
 from core.models import KanjiCard
+from config import get
 
 # SRS intervals in hours per level
 SRS_INTERVALS = {
-    0: 0,       # new — review immediately
-    1: 4,       # 4 hours
-    2: 24,      # 1 day
-    3: 72,      # 3 days
-    4: 168,     # 1 week
-    5: 720,     # 1 month
+    i: v for i, v in enumerate(get("srs", "intervals", [0, 4, 24, 72, 168, 720]))
 }
 
 
@@ -20,7 +16,7 @@ def get_due_cards(limit: int = 10) -> list[KanjiCard]:
         conn = get_shared_connection()
         now = datetime.now().isoformat()
         rows = conn.execute(
-            'SELECT * FROM kanji_srs WHERE next_review <= ? ORDER BY level ASC, next_review ASC LIMIT ?',
+            'SELECT * FROM kanji_srs WHERE next_review <= ? ORDER BY level ASC, RANDOM() LIMIT ?',
             (now, limit)
         ).fetchall()
         cards = [KanjiCard(**dict(row)) for row in rows]
