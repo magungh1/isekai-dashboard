@@ -27,6 +27,7 @@ def use_temp_db(tmp_path):
             status TEXT DEFAULT 'pending',
             category TEXT DEFAULT 'daily',
             deadline TEXT,
+            sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')

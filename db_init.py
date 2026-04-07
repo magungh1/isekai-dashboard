@@ -2,7 +2,8 @@ import sqlite3
 import json
 import os
 
-DB_PATH = 'isekai.db'
+from config import get
+DB_PATH = get("database", "path", "isekai.db")
 VOCAB_PATH = '../japanese-study/vocab_katakana.json'
 
 # Native Japanese words written in hiragana for seeding
@@ -331,6 +332,7 @@ def init_db():
             status TEXT DEFAULT 'pending',
             category TEXT DEFAULT 'daily',
             deadline TEXT,
+            sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -342,6 +344,10 @@ def init_db():
         pass
     try:
         cursor.execute("ALTER TABLE quests ADD COLUMN deadline TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE quests ADD COLUMN sort_order INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
         pass
 
@@ -516,6 +522,20 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
     print("Database initialized and seeded successfully.")
     print(f"  Hiragana words: {len(HIRAGANA_VOCAB)}")
     print(f"  English words: {len(ENGLISH_VOCAB)}")

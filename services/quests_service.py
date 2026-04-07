@@ -15,12 +15,12 @@ def get_quests_by_category(category: str, include_done: bool = False) -> list[Qu
         conn = get_shared_connection()
         if include_done:
             rows = conn.execute(
-                'SELECT * FROM quests WHERE category = ? ORDER BY created_at DESC',
+                'SELECT * FROM quests WHERE category = ? ORDER BY sort_order ASC, created_at DESC',
                 (category,)
             ).fetchall()
         else:
             rows = conn.execute(
-                'SELECT * FROM quests WHERE category = ? AND status != "done" ORDER BY created_at DESC',
+                'SELECT * FROM quests WHERE category = ? AND status != "done" ORDER BY sort_order ASC, created_at DESC',
                 (category,)
             ).fetchall()
         return [Quest(**dict(row)) for row in rows]
@@ -29,7 +29,7 @@ def get_quests_by_category(category: str, include_done: bool = False) -> list[Qu
 def get_all_quests() -> list[Quest]:
     with db_lock:
         conn = get_shared_connection()
-        rows = conn.execute('SELECT * FROM quests ORDER BY created_at DESC').fetchall()
+        rows = conn.execute('SELECT * FROM quests ORDER BY sort_order ASC, created_at DESC').fetchall()
         return [Quest(**dict(row)) for row in rows]
 
 
@@ -107,4 +107,18 @@ def reset_weekly_quests() -> None:
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('last_weekly_reset', ?)",
             (monday,)
         )
+        conn.commit()
+
+
+def update_quests_order(order_updates: list[tuple[int, int]]) -> None:
+    """Update sort_order for multiple quests.
+    order_updates is a list of (quest_id, sort_order)
+    """
+    with db_lock:
+        conn = get_shared_connection()
+        for quest_id, sort_order in order_updates:
+            conn.execute(
+                'UPDATE quests SET sort_order = ? WHERE id = ?',
+                (sort_order, quest_id)
+            )
         conn.commit()
