@@ -197,6 +197,7 @@ class QuestTab(Container):
                 xp_bar.refresh_xp()
             except Exception:
                 pass
+            delete_quest(quest_id)
         self._deferred_load()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
