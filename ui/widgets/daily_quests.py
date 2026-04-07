@@ -8,7 +8,8 @@ from textual.widgets import Static, Label, ListView, ListItem, Input, TabbedCont
 
 from services.quests_service import (
     get_quests_by_category, add_quest, toggle_quest, delete_quest,
-    update_quest, reset_daily_quests, reset_weekly_quests, update_quests_order
+    update_quest, reset_daily_quests, reset_weekly_quests, update_quests_order,
+    get_completed_quests
 )
 from services.xp_service import add_xp, XP_QUEST_COMPLETE
 from core.models import Quest
@@ -115,8 +116,10 @@ class QuestTab(Container):
         if self._category == "goals":
             placeholder = "+ Add goal (or: title | 2026-06-01)..."
         yield ListView(id=f"quest-list-{self._category}", classes="quest-list")
-        yield Input(placeholder=placeholder, id=f"quest-input-{self._category}",
-                    classes="quest-input")
+        
+        if self._category != "done":
+            yield Input(placeholder=placeholder, id=f"quest-input-{self._category}",
+                        classes="quest-input")
 
     def on_mount(self) -> None:
         self.set_timer(0.1, self._deferred_load)
@@ -126,7 +129,10 @@ class QuestTab(Container):
 
     def load_quests(self) -> None:
         try:
-            quests = get_quests_by_category(self._category)
+            if self._category == "done":
+                quests = get_completed_quests()
+            else:
+                quests = get_quests_by_category(self._category)
             logger.debug("Loaded %d quests for category=%s", len(quests), self._category)
             self._render_quests(quests)
         except Exception:
@@ -197,8 +203,10 @@ class QuestTab(Container):
                 xp_bar.refresh_xp()
             except Exception:
                 pass
-            delete_quest(quest_id)
-        self._deferred_load()
+        
+        # Refresh all tabs so items move instantly
+        for tab in self.app.query(QuestTab):
+            tab._deferred_load()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         # Handle edit input submission
@@ -234,9 +242,13 @@ class QuestTab(Container):
         self._deferred_load()
 
     def on_quest_item_drag_start(self, event: QuestItem.DragStart) -> None:
+        if self._category == "done":
+            return
         event.item.add_class("dragging-quest")
 
     def on_quest_item_drag_end(self, event: QuestItem.DragEnd) -> None:
+        if self._category == "done":
+            return
         event.item.remove_class("dragging-quest")
         try:
             widget_at_drop = self.app.get_widget_at(event.end_x, event.end_y)
@@ -297,6 +309,8 @@ class DailyQuests(Static):
                 yield QuestTab(category="weekly")
             with TabPane("🎯 Goals", id="tab-goals"):
                 yield QuestTab(category="goals")
+            with TabPane("✅ Done", id="tab-done"):
+                yield QuestTab(category="done")
 
     def _run_resets(self) -> None:
         reset_daily_quests()

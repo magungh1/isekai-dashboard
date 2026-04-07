@@ -33,6 +33,16 @@ def get_all_quests() -> list[Quest]:
         return [Quest(**dict(row)) for row in rows]
 
 
+def get_completed_quests(limit: int = 50) -> list[Quest]:
+    with db_lock:
+        conn = get_shared_connection()
+        rows = conn.execute(
+            'SELECT * FROM quests WHERE status = "done" ORDER BY created_at DESC LIMIT ?',
+            (limit,)
+        ).fetchall()
+        return [Quest(**dict(row)) for row in rows]
+
+
 def add_quest(title: str, category: str = 'daily', deadline: str | None = None) -> Quest:
     with db_lock:
         conn = get_shared_connection()
