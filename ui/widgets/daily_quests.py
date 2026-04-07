@@ -83,6 +83,14 @@ class QuestItem(ListItem):
 
     def on_mouse_down(self, event: events.MouseDown) -> None:
         if event.button == 1 and not self._editing:
+            try:
+                widget_info = self.app.get_widget_at(event.screen_x, event.screen_y)
+                widget_at_click = widget_info[0] if isinstance(widget_info, tuple) else widget_info
+                if isinstance(widget_at_click, Button):
+                    return
+            except Exception:
+                pass
+            
             self._is_dragging = True
             self.capture_mouse()
             self.post_message(self.DragStart(self, event.screen_y))
