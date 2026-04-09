@@ -1,0 +1,22 @@
+[database]
+path = "isekai.db"
+
+[srs]
+# Review interval hours per level: [new, 4h, 1d, 3d, 1w, 1mo]
+intervals     = [0, 4, 24, 72, 168, 720]
+mastery_level = 4
+
+[xp]
+quest_complete    = 10
+srs_review        = 5
+pomodoro_complete = 25
+level_base        = 50     # XP formula: LEVEL_BASE * N^1.5
+
+[github]
+pr_max_age_days = 90
+
+[llm]
+base_url   = "https://openrouter.ai/api/v1"
+model      = "nvidia/nemotron-3-super-120b-a12b:free"
+max_tokens = 1000
+api_key    = ""   # overrides OPENROUTER_API_KEY env var if set

@@ -1,8 +1,11 @@
 import json
+import os
 import subprocess
+import webbrowser
 from datetime import datetime, timedelta, timezone
 
-PR_MAX_AGE_DAYS = 90
+from config import get
+PR_MAX_AGE_DAYS = get("github", "pr_max_age_days", 90)
 
 
 def _created_after() -> str:
@@ -142,9 +145,25 @@ def close_pr(repo_fullname: str, number: int) -> bool:
         return False
 
 
+def _get_browser(env_var: str) -> webbrowser.BaseBrowser:
+    browser = os.environ.get(env_var)
+    if not browser:
+        return webbrowser.get()
+    try:
+        return webbrowser.get(browser)
+    except webbrowser.Error:
+        class MacAppBrowser(webbrowser.BaseBrowser):
+            def __init__(self, app_name: str):
+                self.app_name = app_name
+            def open(self, url, new=0, autoraise=True):
+                subprocess.Popen(["open", "-a", self.app_name, url])
+                return True
+        webbrowser.register(browser, None, MacAppBrowser(browser))
+        return webbrowser.get(browser)
+
+
 def open_pr_in_browser(url: str) -> None:
-    import webbrowser
-    webbrowser.open(url)
+    _get_browser("BROWSER_GITHUB").open(url)
 
 
 def _api_url_to_html(api_url: str) -> str:

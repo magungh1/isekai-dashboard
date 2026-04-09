@@ -1,0 +1,64 @@
+SettingsScreen {
+    background: #0d1117;
+}
+
+#settings-layout {
+    height: 1fr;
+    width: 100%;
+}
+
+#settings-nav {
+    width: 20;
+    border-right: solid #30363d;
+    background: #161b22;
+    height: 100%;
+}
+
+#settings-nav ListItem {
+    padding: 0 2;
+    color: #8b949e;
+    background: transparent;
+}
+
+#settings-nav ListItem.--highlight {
+    color: #e6edf3;
+    background: #1c2128;
+}
+
+#settings-nav ListItem:hover {
+    background: #1c2128;
+}
+
+#settings-content {
+    padding: 1 2;
+    width: 1fr;
+    height: 100%;
+}
+
+#settings-fields {
+    width: 100%;
+    height: auto;
+}
+
+.settings-field-label {
+    margin-top: 1;
+    width: 100%;
+}
+
+.settings-field-hint {
+    color: #6e7681;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.settings-input {
+    background: #0d1117;
+    border: tall #00ffcc 50%;
+    color: #e6edf3;
+    width: 100%;
+    margin-bottom: 1;
+}
+
+.settings-input:focus {
+    border: tall #ffd700 70%;
+}

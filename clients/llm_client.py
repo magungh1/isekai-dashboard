@@ -6,19 +6,20 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
-MODEL = 'nvidia/nemotron-3-super-120b-a12b:free'
+from config import get
+OPENROUTER_BASE_URL = get("llm", "base_url", "https://openrouter.ai/api/v1")
+MODEL = get("llm", "model", "nvidia/nemotron-3-super-120b-a12b:free")
 
 # Reasoning models need extra token budget for internal thinking
-_MAX_TOKENS = 1000
+_MAX_TOKENS = get("llm", "max_tokens", 1000)
 
 
 def get_client() -> OpenAI | None:
-    api_key = os.environ.get('OPENROUTER_API_KEY', '')
+    api_key = get("llm", "api_key", "") or os.environ.get('OPENROUTER_API_KEY', '')
     if not api_key:
-        logger.warning("OPENROUTER_API_KEY not found in environment")
+        logger.warning("OPENROUTER_API_KEY not set in config or environment")
         return None
-    logger.info("OPENROUTER_API_KEY found (length=%d)", len(api_key))
+    logger.info("OpenRouter API key found (length=%d)", len(api_key))
     return OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
 
 

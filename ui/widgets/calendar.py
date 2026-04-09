@@ -1,10 +1,9 @@
-import webbrowser
-
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Static, Label, ListView, ListItem, Button
 
+from clients.github_client import _get_browser
 from clients.calendar_client import (
     fetch_today_events, get_event_time_status, get_next_meeting_countdown,
     event_starts_within_minutes,
@@ -68,6 +67,9 @@ class Calendar(Static):
             if events is None:
                 cal_list.append(ListItem(Label("❌ icalBuddy not available", classes="pr-failed")))
                 countdown_label.update("")
+            elif isinstance(events, str):
+                cal_list.append(ListItem(Label(f"❌ {events}", classes="pr-failed")))
+                countdown_label.update("")
             elif not events:
                 cal_list.append(ListItem(Label("✨ No meetings today. 自由！", classes="pr-merged")))
                 countdown_label.update("")
@@ -99,4 +101,4 @@ class Calendar(Static):
             while item and not isinstance(item, CalendarItem):
                 item = item.parent
             if item and item.event.get('url'):
-                webbrowser.open(item.event['url'])
+                _get_browser("BROWSER_CALENDAR").open(item.event['url'])
