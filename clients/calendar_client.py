@@ -87,8 +87,8 @@ def get_next_meeting_countdown(events: list[dict]) -> str | None:
     return f"Next: {best['title']} in {time_str}"
 
 
-def fetch_today_events() -> list[dict] | None:
-    """Return list of event dicts with keys: title, time (optional), url (optional)."""
+def fetch_today_events() -> list[dict] | str | None:
+    """Return list of event dicts, an error string if command fails, or None if icalBuddy is missing."""
     ical_path = _find_icalbuddy()
     if not ical_path:
         return None
@@ -97,6 +97,9 @@ def fetch_today_events() -> list[dict] | None:
             [ical_path, '-nc', 'eventsToday'],
             capture_output=True, text=True
         )
+        if result.returncode != 0:
+            return result.stderr.strip() or result.stdout.strip() or f"icalBuddy failed with code {result.returncode}"
+
         output = result.stdout.strip()
         if not output:
             return []

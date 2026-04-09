@@ -33,30 +33,36 @@ logger.info("OPENROUTER_API_KEY in env: %s", bool(os.environ.get('OPENROUTER_API
 
 from textual import events
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Grid
 from textual.widgets import Header, Footer
 
 from ui.widgets.daily_quests import DailyQuests
-from ui.widgets.pomodoro import Pomodoro
+from ui.widgets.productivity_tabs import ProductivityTabs
 from ui.widgets.pull_requests import PullRequests
 from ui.widgets.calendar import Calendar
 from ui.widgets.srs_tabs import SRSTabs
 from ui.widgets.now_playing import NowPlaying
 from ui.widgets.xp_bar import XPBar
+from ui.screens.settings_screen import SettingsScreen
+from config import get
 
-DB_PATH = 'isekai.db'
+DB_PATH = get("database", "path", "isekai.db")
 
 class IsekaiDashboard(App):
     CSS_PATH = "ui/styles.tcss"
     TITLE = "Isekai Dev Dashboard"
     SUB_TITLE = "異世界開発者ダッシュボード"
 
+    SCREENS = {"settings": SettingsScreen}
+
     BINDINGS = [
-        ("q", "quit", "Quit"),
-        ("a", "quick_add_quest", "Add Quest"),
+        Binding("q", "quit", "Quit"),
+        Binding("a", "quick_add_quest", "Add Quest"),
+        Binding("comma", "push_screen('settings')", "Settings"),
     ]
 
-    _widget_classes = [DailyQuests, Pomodoro, PullRequests, Calendar, SRSTabs, NowPlaying]
+    _widget_classes = [DailyQuests, ProductivityTabs, PullRequests, Calendar, SRSTabs, NowPlaying]
     _pending_g: bool = False
 
     def on_key(self, event: events.Key) -> None:
@@ -84,7 +90,7 @@ class IsekaiDashboard(App):
         yield XPBar(id="xp-bar")
         with Grid(id="dashboard-grid"):
             yield DailyQuests(classes="tool-widget")
-            yield Pomodoro(classes="tool-widget")
+            yield ProductivityTabs(classes="tool-widget")
             yield PullRequests(classes="tool-widget")
             yield Calendar(classes="tool-widget")
             yield SRSTabs(classes="tool-widget")

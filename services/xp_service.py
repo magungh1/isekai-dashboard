@@ -1,14 +1,15 @@
 from datetime import date, timedelta
 
 from core.db import get_shared_connection, db_lock
+from config import get
 
 # XP rewards
-XP_QUEST_COMPLETE = 10
-XP_SRS_REVIEW = 5
-XP_POMODORO_COMPLETE = 25
+XP_QUEST_COMPLETE = get("xp", "quest_complete", 10)
+XP_SRS_REVIEW = get("xp", "srs_review", 5)
+XP_POMODORO_COMPLETE = get("xp", "pomodoro_complete", 25)
 
 # Level thresholds: level N requires LEVEL_BASE * N^1.5 total XP
-LEVEL_BASE = 50
+LEVEL_BASE = get("xp", "level_base", 50)
 
 
 def _ensure_xp_table() -> None:
