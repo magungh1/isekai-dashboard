@@ -19,7 +19,7 @@ def _ensure_xp_table():
     try:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS xp_log (
-                id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 xp INTEGER NOT NULL,
                 source TEXT NOT NULL,
                 created_date TEXT NOT NULL

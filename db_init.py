@@ -1,4 +1,4 @@
-"""Seed Supabase with initial quest + vocab data.
+"""Initialize database and seed vocab data.
 
 Usage:
     export SUPABASE_URL="https://your-ref.supabase.co"
@@ -8,10 +8,8 @@ Usage:
 
 import os, sys
 
-from datetime import date
-
 from core.db import get_shared_connection, release_connection
-from config import get
+from core.migrations import init_schema, run_migrations
 
 VOCAB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "japanese-study", "vocab_katakana.json")
 
@@ -101,6 +99,7 @@ HIRAGANA_VOCAB = {
     "いつつ": "five (things)",
 }
 
+
 ENGLISH_VOCAB = [
     ("ephemeral", "adj", "lasting for a very short time", "Ephemeral containers are destroyed after use"),
     ("ubiquitous", "adj", "found everywhere; omnipresent", "Smartphones have become ubiquitous in modern life"),
@@ -153,6 +152,7 @@ ENGLISH_VOCAB = [
     ("propensity", "noun", "a natural tendency to behave in a certain way", "JavaScript has a propensity for type coercion bugs"),
 ]
 
+
 KANJI_VOCAB = [
     ("日", "ひ", "ニチ/ジツ", "day, sun"), ("月", "つき", "ゲツ/ガツ", "month, moon"),
     ("火", "ひ", "カ", "fire"), ("水", "みず", "スイ", "water"),
@@ -189,112 +189,21 @@ def init_db(conn=None, *, close=True):
         conn = get_shared_connection()
         own_conn = True
 
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS quests (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            title TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            category TEXT NOT NULL DEFAULT 'daily',
-            deadline TIMESTAMPTZ,
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
+    # Create all tables from scratch with latest schema
+    init_schema(conn, close=False)
 
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS meta (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS kana_srs (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            word TEXT NOT NULL UNIQUE,
-            meaning TEXT NOT NULL,
-            mnemonic TEXT,
-            level INTEGER NOT NULL DEFAULT 0,
-            next_review TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            type TEXT NOT NULL DEFAULT 'katakana',
-            review_count INTEGER NOT NULL DEFAULT 0,
-            last_reviewed TIMESTAMPTZ,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS english_srs (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            word TEXT NOT NULL UNIQUE,
-            definition TEXT NOT NULL,
-            example TEXT,
-            mnemonic TEXT,
-            part_of_speech TEXT NOT NULL DEFAULT 'noun',
-            level INTEGER NOT NULL DEFAULT 0,
-            next_review TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            review_count INTEGER NOT NULL DEFAULT 0,
-            last_reviewed TIMESTAMPTZ,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS kanji_srs (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            kanji TEXT NOT NULL UNIQUE,
-            kun_reading TEXT,
-            on_reading TEXT,
-            meaning TEXT NOT NULL,
-            mnemonic TEXT,
-            level INTEGER NOT NULL DEFAULT 0,
-            next_review TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            review_count INTEGER NOT NULL DEFAULT 0,
-            last_reviewed TIMESTAMPTZ,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS srs_reviews (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            deck TEXT NOT NULL,
-            card_id BIGINT NOT NULL,
-            rating TEXT NOT NULL,
-            prev_level INTEGER NOT NULL DEFAULT 0,
-            new_level INTEGER NOT NULL DEFAULT 0,
-            reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS xp_log (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            xp INTEGER NOT NULL,
-            source TEXT NOT NULL,
-            created_date TEXT NOT NULL
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS notes (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            content TEXT NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
-
-    # Seeds
-    with open(VOCAB_PATH, "r", encoding="utf-8") as f:
-        vocab = __import__("json").load(f)
-        for word, meaning in vocab.items():
-            try:
-                conn.execute(
-                    "INSERT INTO kana_srs (word, meaning, type) VALUES (%s, %s, 'katakana')",
-                    (word, meaning),
-                )
-            except Exception:
-                pass
+    # --- Seeds ---
+    if os.path.exists(VOCAB_PATH):
+        with open(VOCAB_PATH, "r", encoding="utf-8") as f:
+            vocab = __import__("json").load(f)
+            for word, meaning in vocab.items():
+                try:
+                    conn.execute(
+                        "INSERT INTO kana_srs (word, meaning, type) VALUES (%s, %s, 'katakana')",
+                        (word, meaning),
+                    )
+                except Exception:
+                    pass
 
     for word, meaning in HIRAGANA_VOCAB.items():
         try:
@@ -323,10 +232,9 @@ def init_db(conn=None, *, close=True):
         except Exception:
             pass
 
-    # Default quests
     try:
-        conn.execute("SELECT COUNT(*) FROM quests")
-        if conn.fetchone()[0] == 0:
+        count_row = conn.execute("SELECT COUNT(*) FROM quests").fetchone()
+        if count_row and count_row[0] == 0:
             for title, category in [
                 ("Review Katakana Flashcards", "daily"),
                 ("Review Hiragana Flashcards", "daily"),
@@ -344,15 +252,19 @@ def init_db(conn=None, *, close=True):
 
     if own_conn:
         conn.commit()
-        # Create indexes
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_kana_due ON kana_srs (level ASC, next_review ASC)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_english_due ON english_srs (level ASC, next_review ASC)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_kanji_due ON kanji_srs (level ASC, next_review ASC)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_quests_cat ON quests (category, status, sort_order)")
-        conn.commit()
         release_connection(conn)
         print("Database initialized and seeded successfully.")
 
 
 if __name__ == "__main__":
-    init_db()
+    supabase = bool(os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_KEY"))
+
+    if supabase:
+        from core.migrations import run_migrations
+        applied = run_migrations()
+        if applied:
+            print(f"Applied migrations: v{', v'.join(str(v) for v in applied)}")
+        else:
+            print("No new migrations to apply.")
+    else:
+        init_db()

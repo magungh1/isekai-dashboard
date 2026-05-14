@@ -8,6 +8,8 @@ from textual.widgets import Static, Label, Button, ProgressBar
 from textual.binding import Binding
 from textual.timer import Timer
 
+from config import get_int
+
 from services.xp_service import add_xp, XP_POMODORO_COMPLETE, get_today_pomodoro_count
 
 IDLE = "idle"

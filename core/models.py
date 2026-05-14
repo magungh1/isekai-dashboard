@@ -11,6 +11,7 @@ class Quest:
     category: str = 'daily'
     deadline: str | None = None
     sort_order: int = 0
+    completed_date: str | None = None
 
     @property
     def is_done(self) -> bool:
