@@ -1,27 +1,50 @@
 import json
 import subprocess
-import os
 import logging
+
+from config import get_browser, get_list
 
 logger = logging.getLogger(__name__)
 
+_URL_PATTERNS = None
+_TITLE_SUFFIXES = None
+
+
+def _get_url_patterns() -> list[str]:
+    global _URL_PATTERNS
+    if _URL_PATTERNS is None:
+        _URL_PATTERNS = get_list("media", "url_patterns")
+    return _URL_PATTERNS
+
+
+def _get_title_suffixes() -> list[str]:
+    global _TITLE_SUFFIXES
+    if _TITLE_SUFFIXES is None:
+        _TITLE_SUFFIXES = get_list("media", "title_suffixes")
+    return _TITLE_SUFFIXES
+
 
 def get_media_browser() -> str:
-    """Returns the configured media browser, defaulting to Brave Browser."""
-    return os.environ.get("MEDIA_BROWSER", "Brave Browser")
+    return get_browser()
 
 
 def _clean_title(title: str) -> str:
-    return title.replace(" - YouTube Music", "").replace(" - YouTube", "")
+    for suffix in _get_title_suffixes():
+        title = title.replace(suffix, "")
+    return title
+
+
+def _url_check_expr() -> str:
+    patterns = _get_url_patterns()
+    if len(patterns) == 1:
+        return f'u contains "{patterns[0]}"'
+    parts = " or ".join(f'u contains "{p}"' for p in patterns)
+    return f"({parts})"
 
 
 def get_all_youtube_tabs() -> list[dict]:
-    """
-    Discover all YouTube/YouTube Music tabs across all browser windows.
-    Returns list of dicts with keys: w, t, title, playing.
-    Window/tab indices are 1-based (AppleScript convention).
-    """
     browser = get_media_browser()
+    url_check = _url_check_expr()
 
     script = f"""
     tell application "{browser}"
@@ -34,7 +57,7 @@ def get_all_youtube_tabs() -> list[dict]:
             repeat with t in tabs of w
                 set tIdx to tIdx + 1
                 set u to URL of t
-                if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                if {url_check} then
                     try
                         set p to execute t javascript "document.querySelector('video').paused"
                     on error
@@ -72,7 +95,6 @@ def get_all_youtube_tabs() -> list[dict]:
 
 
 def get_current_track() -> str | None:
-    """Legacy single-tab lookup. Returns title of first YouTube tab found."""
     tabs = get_all_youtube_tabs()
     if tabs:
         return tabs[0]['title']
@@ -80,8 +102,8 @@ def get_current_track() -> str | None:
 
 
 def get_playback_progress(window: int = 0, tab: int = 0) -> tuple[float, float] | None:
-    """Return (current_time, duration) in seconds for a specific tab, or None."""
     browser = get_media_browser()
+    url_check = _url_check_expr()
 
     if window > 0 and tab > 0:
         script = f"""
@@ -89,7 +111,7 @@ def get_playback_progress(window: int = 0, tab: int = 0) -> tuple[float, float] 
             if not (exists window {window}) then return ""
             set t to tab {tab} of window {window}
             set u to URL of t
-            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+            if {url_check} then
                 set res to execute t javascript "JSON.stringify({{c: document.querySelector('video').currentTime, d: document.querySelector('video').duration}})"
                 return res
             end if
@@ -103,7 +125,7 @@ def get_playback_progress(window: int = 0, tab: int = 0) -> tuple[float, float] 
             repeat with w in windows
                 repeat with t in tabs of w
                     set u to URL of t
-                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                    if {url_check} then
                         set res to execute t javascript "JSON.stringify({{c: document.querySelector('video').currentTime, d: document.querySelector('video').duration}})"
                         return res
                     end if
@@ -127,11 +149,8 @@ def get_playback_progress(window: int = 0, tab: int = 0) -> tuple[float, float] 
 
 
 def toggle_playback(window: int = 0, tab: int = 0) -> bool:
-    """
-    Toggle play/pause on a specific tab, or the first YouTube tab found.
-    Requires 'Allow JavaScript from Apple Events' in the browser's Developer menu.
-    """
     browser = get_media_browser()
+    url_check = _url_check_expr()
 
     if window > 0 and tab > 0:
         script = f"""
@@ -139,7 +158,7 @@ def toggle_playback(window: int = 0, tab: int = 0) -> bool:
             if not (exists window {window}) then return "No window"
             set t to tab {tab} of window {window}
             set u to URL of t
-            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+            if {url_check} then
                 execute t javascript "document.querySelector('video').paused ? document.querySelector('video').play() : document.querySelector('video').pause()"
                 return "Success"
             end if
@@ -153,7 +172,7 @@ def toggle_playback(window: int = 0, tab: int = 0) -> bool:
             repeat with w in windows
                 repeat with t in tabs of w
                     set u to URL of t
-                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                    if {url_check} then
                         execute t javascript "document.querySelector('video').paused ? document.querySelector('video').play() : document.querySelector('video').pause()"
                         return "Success"
                     end if
@@ -179,11 +198,8 @@ def toggle_playback(window: int = 0, tab: int = 0) -> bool:
 
 
 def next_video(window: int = 0, tab: int = 0) -> bool:
-    """
-    Click YouTube's next video button on a specific tab.
-    Requires 'Allow JavaScript from Apple Events' in the browser's Developer menu.
-    """
     browser = get_media_browser()
+    url_check = _url_check_expr()
 
     if window > 0 and tab > 0:
         script = f"""
@@ -191,7 +207,7 @@ def next_video(window: int = 0, tab: int = 0) -> bool:
             if not (exists window {window}) then return "No window"
             set t to tab {tab} of window {window}
             set u to URL of t
-            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+            if {url_check} then
                 execute t javascript "var btn = document.querySelector('.ytp-next-button'); if (btn) btn.click(); else throw 'No next button'"
                 return "Success"
             end if
@@ -205,7 +221,7 @@ def next_video(window: int = 0, tab: int = 0) -> bool:
             repeat with w in windows
                 repeat with t in tabs of w
                     set u to URL of t
-                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                    if {url_check} then
                         execute t javascript "var btn = document.querySelector('.ytp-next-button'); if (btn) btn.click(); else throw 'No next button'"
                         return "Success"
                     end if
@@ -231,11 +247,8 @@ def next_video(window: int = 0, tab: int = 0) -> bool:
 
 
 def previous_video(window: int = 0, tab: int = 0) -> bool:
-    """
-    Click YouTube's previous video button on a specific tab.
-    Requires 'Allow JavaScript from Apple Events' in the browser's Developer menu.
-    """
     browser = get_media_browser()
+    url_check = _url_check_expr()
 
     if window > 0 and tab > 0:
         script = f"""
@@ -243,7 +256,7 @@ def previous_video(window: int = 0, tab: int = 0) -> bool:
             if not (exists window {window}) then return "No window"
             set t to tab {tab} of window {window}
             set u to URL of t
-            if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+            if {url_check} then
                 execute t javascript "var btn = document.querySelector('.ytp-prev-button'); if (btn) btn.click(); else throw 'No prev button'"
                 return "Success"
             end if
@@ -257,7 +270,7 @@ def previous_video(window: int = 0, tab: int = 0) -> bool:
             repeat with w in windows
                 repeat with t in tabs of w
                     set u to URL of t
-                    if u contains "youtube.com/watch" or u contains "music.youtube.com" then
+                    if {url_check} then
                         execute t javascript "var btn = document.querySelector('.ytp-prev-button'); if (btn) btn.click(); else throw 'No prev button'"
                         return "Success"
                     end if

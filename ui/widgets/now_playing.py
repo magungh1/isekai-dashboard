@@ -49,10 +49,12 @@ class NowPlaying(Static):
 
     def on_mount(self) -> None:
         from clients.media_client import get_media_browser
+        from config import get_float
         browser = get_media_browser()
         self.query_one("#np-browser", Label).update(f"Source: {browser}")
 
-        self.set_interval(3.0, self.update_track_info)
+        poll = get_float("media", "poll_interval", default=3.0)
+        self.set_interval(poll, self.update_track_info)
         self.update_track_info()
 
     @work(thread=True)

@@ -17,8 +17,10 @@ class XPBar(Static):
             yield Label("", id="xp-detail-label")
 
     def on_mount(self) -> None:
+        from config import get_int
         self.refresh_xp()
-        self.set_interval(10, self.refresh_xp)
+        refresh = get_int("xp", "refresh_interval", default=10)
+        self.set_interval(refresh, self.refresh_xp)
 
     @work(thread=True)
     def refresh_xp(self) -> None:

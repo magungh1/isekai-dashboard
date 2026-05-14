@@ -1,8 +1,10 @@
+import os
 import re
 import shutil
 import subprocess
 from datetime import datetime
 
+from config import get_int
 
 _MEET_URL_RE = re.compile(
     r'https?://(?:meet\.google\.com|[\w.]*zoom\.us|teams\.microsoft\.com)\S+'
@@ -15,16 +17,13 @@ def _find_icalbuddy() -> str | None:
     path = shutil.which('icalBuddy')
     if path:
         return path
-    # Common Homebrew locations
     for candidate in ['/opt/homebrew/bin/icalBuddy', '/usr/local/bin/icalBuddy']:
-        import os
         if os.path.isfile(candidate):
             return candidate
     return None
 
 
 def parse_time_range(time_str: str | None) -> tuple[datetime | None, datetime | None]:
-    """Parse a time string like '17.00 - 18.00' into start/end datetimes for today."""
     if not time_str:
         return None, None
     match = _TIME_RANGE_RE.search(time_str)
@@ -39,7 +38,6 @@ def parse_time_range(time_str: str | None) -> tuple[datetime | None, datetime | 
 
 
 def get_event_time_status(time_str: str | None) -> str:
-    """Return time status: 'now', 'soon' (within 30min), 'past', or 'future'."""
     start, end = parse_time_range(time_str)
     if start is None or end is None:
         return "future"
@@ -48,14 +46,14 @@ def get_event_time_status(time_str: str | None) -> str:
         return "now"
     if now > end:
         return "past"
+    soon_threshold = get_int("calendar", "soon_threshold", default=30)
     minutes_until = (start - now).total_seconds() / 60
-    if minutes_until <= 30:
+    if minutes_until <= soon_threshold:
         return "soon"
     return "future"
 
 
 def event_starts_within_minutes(event: dict, minutes: int) -> bool:
-    """Check if an event starts within the specified minutes from now."""
     start, _ = parse_time_range(event.get('time'))
     if start is None:
         return False
@@ -65,7 +63,6 @@ def event_starts_within_minutes(event: dict, minutes: int) -> bool:
 
 
 def get_next_meeting_countdown(events: list[dict]) -> str | None:
-    """Return countdown text for the next upcoming event, or None."""
     now = datetime.now()
     best = None
     best_start = None
@@ -88,7 +85,6 @@ def get_next_meeting_countdown(events: list[dict]) -> str | None:
 
 
 def fetch_today_events() -> list[dict] | None:
-    """Return list of event dicts with keys: title, time (optional), url (optional)."""
     ical_path = _find_icalbuddy()
     if not ical_path:
         return None

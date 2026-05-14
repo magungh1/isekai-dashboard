@@ -28,11 +28,12 @@ def test_fetch_today_events_success():
     mock_result = MagicMock()
     mock_result.stdout = "• Team standup\n• 1:1 with manager\n"
 
-    with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
-        events = fetch_today_events()
-        assert len(events) == 2
-        assert events[0]['title'] == "Team standup"
-        assert events[0]['url'] is None
+    with patch("clients.calendar_client._find_icalbuddy", return_value="/usr/bin/icalBuddy"):
+        with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
+            events = fetch_today_events()
+            assert len(events) == 2
+            assert events[0]['title'] == "Team standup"
+            assert events[0]['url'] is None
 
 
 def test_fetch_today_events_with_meet_link():
@@ -43,21 +44,23 @@ def test_fetch_today_events_with_meet_link():
         "    18.00 - 18.15\n"
     )
 
-    with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
-        events = fetch_today_events()
-        assert len(events) == 1
-        assert events[0]['title'] == "Daily Sync"
-        assert events[0]['url'] == "https://meet.google.com/abc-defg-hij"
-        assert events[0]['time'] == "18.00 - 18.15"
+    with patch("clients.calendar_client._find_icalbuddy", return_value="/usr/bin/icalBuddy"):
+        with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
+            events = fetch_today_events()
+            assert len(events) == 1
+            assert events[0]['title'] == "Daily Sync"
+            assert events[0]['url'] == "https://meet.google.com/abc-defg-hij"
+            assert events[0]['time'] == "18.00 - 18.15"
 
 
 def test_fetch_today_events_no_events():
     mock_result = MagicMock()
     mock_result.stdout = ""
 
-    with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
-        events = fetch_today_events()
-        assert events == []
+    with patch("clients.calendar_client._find_icalbuddy", return_value="/usr/bin/icalBuddy"):
+        with patch("clients.calendar_client.subprocess.run", return_value=mock_result):
+            events = fetch_today_events()
+            assert events == []
 
 
 def test_fetch_today_events_not_installed():

@@ -46,8 +46,10 @@ class SRSTabs(Static):
                 yield SRSStats()
 
     def on_mount(self) -> None:
+        from config import get_int
         self._refresh_due_badges()
-        self.set_interval(30, self._refresh_due_badges)
+        refresh = get_int("srs", "badge_refresh_interval", default=30)
+        self.set_interval(refresh, self._refresh_due_badges)
 
     @work(thread=True)
     def _refresh_due_badges(self) -> None:

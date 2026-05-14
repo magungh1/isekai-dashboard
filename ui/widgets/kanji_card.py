@@ -49,7 +49,9 @@ class KanjiVocab(Static):
 
     @work(thread=True)
     def load_cards(self) -> None:
-        cards = get_due_cards(limit=20)
+        from config import get_int
+        limit = get_int("srs", "deck_size", default=20)
+        cards = get_due_cards(limit=limit)
         stats = get_stats()
         self.app.call_from_thread(self._set_cards, cards, stats)
 
@@ -150,9 +152,11 @@ class KanjiVocab(Static):
 
     @work(thread=True)
     def _rate_card(self, card_id: int, rating: str) -> None:
+        from config import get_int
         review_card(card_id, rating)
         add_xp(XP_SRS_REVIEW, "srs_kanji")
-        cards = get_due_cards(limit=20)
+        limit = get_int("srs", "deck_size", default=20)
+        cards = get_due_cards(limit=limit)
         stats = get_stats()
         self.app.call_from_thread(self._set_cards, cards, stats)
         self.app.call_from_thread(self._refresh_xp)

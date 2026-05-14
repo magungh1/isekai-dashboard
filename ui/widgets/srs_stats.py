@@ -6,6 +6,7 @@ from services.srs_service import get_detailed_stats as kana_detailed_stats
 from services.english_srs_service import get_detailed_stats as english_detailed_stats
 from services.kanji_srs_service import get_detailed_stats as kanji_detailed_stats
 from ui.widgets.srs_utils import level_badge, progress_bar_text
+from config import get_int
 
 
 class SRSStats(Static):
@@ -28,19 +29,22 @@ class SRSStats(Static):
 
     def _render_stats(self, kata: dict, hira: dict, eng: dict, kanji: dict) -> None:
         lines = []
+        ml = get_int("srs", "mastery_level", default=4)
+        lc = get_int("srs", "level_count", default=6)
+        bw = get_int("srs", "progress_bar_width_stats", default=12)
 
         for name, stats in [("Katakana", kata), ("Hiragana", hira), ("English", eng), ("Kanji", kanji)]:
             dist = stats['level_distribution']
             total = stats['total']
-            mastered = sum(v for k, v in dist.items() if k >= 4)
-            bar = progress_bar_text(mastered, total, width=12)
+            mastered = sum(v for k, v in dist.items() if k >= ml)
+            bar = progress_bar_text(mastered, total, width=bw)
 
             lines.append(f"  {name}")
             lines.append(f"    {bar}")
             lines.append(f"    Due now: {stats['due_now']}  |  Due tomorrow: {stats['due_tomorrow']}")
 
             level_parts = []
-            for lvl in range(6):
+            for lvl in range(lc):
                 count = dist.get(lvl, 0)
                 if count > 0:
                     badge = level_badge(lvl)

@@ -1,94 +1,107 @@
 from datetime import date, timedelta
 
-from core.db import get_shared_connection, db_lock
-
-# XP rewards
-XP_QUEST_COMPLETE = 10
-XP_SRS_REVIEW = 5
-XP_POMODORO_COMPLETE = 25
-
-# Level thresholds: level N requires LEVEL_BASE * N^1.5 total XP
-LEVEL_BASE = 50
+from config import get_int
+from core.db import get_shared_connection, release_connection
 
 
-def _ensure_xp_table() -> None:
+def _xp_val(key: str, default: int) -> int:
+    return get_int("xp", key, default=default)
+
+
+XP_QUEST_COMPLETE = _xp_val("quest_complete", 10)
+XP_SRS_REVIEW = _xp_val("srs_review", 5)
+XP_POMODORO_COMPLETE = _xp_val("pomodoro_complete", 25)
+LEVEL_BASE = _xp_val("level_base", 50)
+
+
+def _ensure_xp_table():
     conn = get_shared_connection()
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS xp_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            xp INTEGER NOT NULL,
-            source TEXT NOT NULL,
-            created_date TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
+    try:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS xp_log (
+                id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                xp INTEGER NOT NULL,
+                source TEXT NOT NULL,
+                created_date TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+    finally:
+        release_connection(conn)
 
 
 def add_xp(amount: int, source: str) -> None:
-    with db_lock:
-        _ensure_xp_table()
-        conn = get_shared_connection()
+    _ensure_xp_table()
+    conn = get_shared_connection()
+    try:
         today = date.today().isoformat()
         conn.execute(
-            'INSERT INTO xp_log (xp, source, created_date) VALUES (?, ?, ?)',
-            (amount, source, today)
+            'INSERT INTO xp_log (xp, source, created_date) VALUES (%s, %s, %s)',
+            (amount, source, today),
         )
         conn.commit()
+    finally:
+        release_connection(conn)
 
 
 def get_total_xp() -> int:
-    with db_lock:
-        _ensure_xp_table()
-        conn = get_shared_connection()
+    _ensure_xp_table()
+    conn = get_shared_connection()
+    try:
         row = conn.execute('SELECT COALESCE(SUM(xp), 0) FROM xp_log').fetchone()
         return row[0]
+    finally:
+        release_connection(conn)
 
 
 def get_today_xp() -> int:
-    with db_lock:
-        _ensure_xp_table()
-        conn = get_shared_connection()
+    _ensure_xp_table()
+    conn = get_shared_connection()
+    try:
         today = date.today().isoformat()
         row = conn.execute(
-            'SELECT COALESCE(SUM(xp), 0) FROM xp_log WHERE created_date = ?',
-            (today,)
+            'SELECT COALESCE(SUM(xp), 0) FROM xp_log WHERE created_date = %s',
+            (today,),
         ).fetchone()
         return row[0]
+    finally:
+        release_connection(conn)
 
 
 def xp_for_level(level: int) -> int:
-    """Total XP required to reach a given level."""
     if level <= 0:
         return 0
     return int(LEVEL_BASE * (level ** 1.5))
 
 
 def get_today_pomodoro_count() -> int:
-    """Return how many pomodoro sessions were completed today."""
-    with db_lock:
-        _ensure_xp_table()
-        conn = get_shared_connection()
+    _ensure_xp_table()
+    conn = get_shared_connection()
+    try:
         today = date.today().isoformat()
         row = conn.execute(
-            "SELECT COUNT(*) FROM xp_log WHERE source = 'pomodoro' AND created_date = ?",
-            (today,)
+            "SELECT COUNT(*) FROM xp_log WHERE source = %s AND created_date = %s",
+            ('pomodoro', today),
         ).fetchone()
         return row[0]
+    finally:
+        release_connection(conn)
 
 
 def get_streak() -> int:
-    """Return number of consecutive days with XP activity, ending today or yesterday."""
-    with db_lock:
-        _ensure_xp_table()
-        conn = get_shared_connection()
+    _ensure_xp_table()
+    conn = get_shared_connection()
+    try:
         rows = conn.execute(
             'SELECT DISTINCT created_date FROM xp_log ORDER BY created_date DESC'
         ).fetchall()
+    finally:
+        release_connection(conn)
+
     if not rows:
         return 0
-    dates = [date.fromisoformat(r[0]) for r in rows]
+    dates = [date.fromisoformat(r['created_date']) for r in rows]
     today = date.today()
-    # Streak must include today or yesterday to be active
     if dates[0] != today and dates[0] != today - timedelta(days=1):
         return 0
     streak = 1
@@ -101,7 +114,6 @@ def get_streak() -> int:
 
 
 def get_level_info() -> dict:
-    """Returns current level, XP within level, and XP needed for next level."""
     total_xp = get_total_xp()
     level = 0
     while xp_for_level(level + 1) <= total_xp:

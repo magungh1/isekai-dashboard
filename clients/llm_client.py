@@ -1,16 +1,10 @@
 import logging
 import os
-import re
 
 from openai import OpenAI
+from config import get, get_int
 
 logger = logging.getLogger(__name__)
-
-OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
-MODEL = 'nvidia/nemotron-3-super-120b-a12b:free'
-
-# Reasoning models need extra token budget for internal thinking
-_MAX_TOKENS = 1000
 
 
 def get_client() -> OpenAI | None:
@@ -18,25 +12,25 @@ def get_client() -> OpenAI | None:
     if not api_key:
         logger.warning("OPENROUTER_API_KEY not found in environment")
         return None
-    logger.info("OPENROUTER_API_KEY found (length=%d)", len(api_key))
-    return OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+    base_url = get("llm", "base_url")
+    logger.info("OPENROUTER_API_KEY found (length=%d), base_url=%s", len(api_key), base_url)
+    return OpenAI(base_url=base_url, api_key=api_key)
 
 
 def _call(client: OpenAI, prompt: str) -> str | None:
-    """Make an API call and extract content, with reasoning model fallback."""
+    model = get("llm", "model")
+    max_tokens = get_int("llm", "max_tokens", default=1000)
     try:
         response = client.chat.completions.create(
-            model=MODEL,
+            model=model,
             messages=[{'role': 'user', 'content': prompt}],
-            max_tokens=_MAX_TOKENS,
+            max_tokens=max_tokens,
         )
         text = response.choices[0].message.content
         if text:
             return text.strip()
-        # Fallback: extract from reasoning field
         reasoning = getattr(response.choices[0].message, 'reasoning', None)
         if reasoning:
-            # Take last non-empty line as the answer
             lines = [l.strip() for l in reasoning.strip().split('\n') if l.strip()]
             if lines:
                 return lines[-1]

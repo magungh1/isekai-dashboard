@@ -19,7 +19,10 @@ def level_badge(level: int) -> str:
     return f"{icon} {label}"
 
 
-def progress_bar_text(mastered: int, total: int, width: int = 20) -> str:
+def progress_bar_text(mastered: int, total: int, width: int | None = None) -> str:
+    if width is None:
+        from config import get_int
+        width = get_int("srs", "progress_bar_width", default=20)
     """Render a text-based progress bar."""
     if total == 0:
         return "░" * width + " 0/0"

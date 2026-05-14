@@ -2,13 +2,23 @@ import json
 import subprocess
 from datetime import datetime, timedelta, timezone
 
+from config import get_int, get_list
+
 PR_MAX_AGE_DAYS = 90
+_NOTIFICATION_REASONS = None
 
 
 def _created_after() -> str:
-    """Return ISO date string for PR_MAX_AGE_DAYS ago (for --created flag)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=PR_MAX_AGE_DAYS)
+    days = get_int("github", "pr_max_age_days", default=90)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     return f">={cutoff.strftime('%Y-%m-%d')}"
+
+
+def _get_notification_reasons() -> set[str]:
+    global _NOTIFICATION_REASONS
+    if _NOTIFICATION_REASONS is None:
+        _NOTIFICATION_REASONS = set(get_list("github", "notification_reasons"))
+    return _NOTIFICATION_REASONS
 
 
 def fetch_open_prs() -> list[dict] | None:
@@ -60,7 +70,6 @@ def fetch_assigned_prs() -> list[dict] | None:
 
 
 def fetch_review_decision(repo_fullname: str, number: int) -> str:
-    """Fetch reviewDecision for a single PR via gh pr view."""
     try:
         result = subprocess.run(
             ['gh', 'pr', 'view', str(number), '-R', repo_fullname,
@@ -74,7 +83,6 @@ def fetch_review_decision(repo_fullname: str, number: int) -> str:
 
 
 def enrich_prs_with_review_status(prs: list[dict]) -> None:
-    """Add reviewDecision to each PR by querying gh pr view."""
     for pr in prs:
         repo = pr.get('repository', {})
         fullname = repo.get('nameWithOwner') or f"{repo.get('owner', {}).get('login', '')}/{repo['name']}"
@@ -148,11 +156,6 @@ def open_pr_in_browser(url: str) -> None:
 
 
 def _api_url_to_html(api_url: str) -> str:
-    """Convert GitHub API URL to browser URL.
-
-    e.g. https://api.github.com/repos/owner/repo/pulls/123
-      -> https://github.com/owner/repo/pull/123
-    """
     if not api_url:
         return ""
     url = api_url.replace("https://api.github.com/repos/", "https://github.com/")
@@ -161,7 +164,6 @@ def _api_url_to_html(api_url: str) -> str:
 
 
 def fetch_notifications() -> list[dict] | None:
-    """Fetch unread GitHub notifications via gh CLI."""
     try:
         result = subprocess.run(
             ['gh', 'api', 'notifications'],
@@ -169,7 +171,7 @@ def fetch_notifications() -> list[dict] | None:
         )
         raw = json.loads(result.stdout)
         notifications = []
-        allowed_reasons = {"review_requested", "mention"}
+        allowed_reasons = _get_notification_reasons()
         for n in raw:
             if not n.get('unread', False):
                 continue
@@ -193,7 +195,6 @@ def fetch_notifications() -> list[dict] | None:
 
 
 def mark_notification_read(thread_id: str) -> bool:
-    """Mark a single notification thread as read."""
     try:
         subprocess.run(
             ['gh', 'api', '--method', 'PATCH', f'notifications/threads/{thread_id}'],
