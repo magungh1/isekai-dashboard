@@ -51,9 +51,11 @@ class Calendar(Static):
         yield ListView(id="cal-list")
 
     def on_mount(self) -> None:
+        from config import get_int
         self._notified_events: set[tuple[str, str]] = set()
         self.fetch_calendar()
-        self.set_interval(120, self.fetch_calendar)
+        refresh = get_int("calendar", "refresh_interval", default=120)
+        self.set_interval(refresh, self.fetch_calendar)
 
     @work(thread=True)
     def fetch_calendar(self) -> None:
@@ -81,7 +83,9 @@ class Calendar(Static):
                 now_notified = set()
                 for event in events:
                     event_key = (event['title'], event.get('time', ''))
-                    if event_starts_within_minutes(event, 3) and event_key not in self._notified_events:
+                    from config import get_int
+                    notify_window = get_int("calendar", "notify_window", default=3)
+                    if event_starts_within_minutes(event, notify_window) and event_key not in self._notified_events:
                         self.app.notify(f"Meeting starting soon: {event['title']}", title="Calendar")
                         now_notified.add(event_key)
 

@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from core.db import get_shared_connection, release_connection
 from core.models import Quest
+from config import get_int
 
 
 def _ensure_meta_table(conn):
@@ -38,7 +39,9 @@ def get_all_quests() -> list[Quest]:
         release_connection(conn)
 
 
-def get_completed_quests(limit: int = 50) -> list[Quest]:
+def get_completed_quests(limit: int | None = None) -> list[Quest]:
+    if limit is None:
+        limit = get_int("quests", "completed_limit", default=50)
     conn = get_shared_connection()
     try:
         rows = conn.execute(
@@ -57,8 +60,9 @@ def add_quest(title: str, category: str = "daily", deadline: str | None = None) 
             "INSERT INTO quests (title, status, category, deadline) VALUES (%s, %s, %s, %s) RETURNING *",
             (title, "pending", category, deadline),
         )
+        row = dict(cur.fetchone())
         conn.commit()
-        return Quest(**dict(cur.fetchone()))
+        return Quest(**row)
     finally:
         release_connection(conn)
 
@@ -70,8 +74,9 @@ def toggle_quest(quest_id: int) -> Quest:
             "UPDATE quests SET status = CASE WHEN status = %s THEN %s ELSE %s END WHERE id = %s RETURNING *",
             ("pending", "done", "pending", quest_id),
         )
+        row = dict(cur.fetchone())
         conn.commit()
-        return Quest(**dict(cur.fetchone()))
+        return Quest(**row)
     finally:
         release_connection(conn)
 
@@ -83,8 +88,9 @@ def update_quest(quest_id: int, title: str, deadline: str | None = None) -> Ques
             "UPDATE quests SET title = %s, deadline = %s WHERE id = %s RETURNING *",
             (title, deadline, quest_id),
         )
+        row = dict(cur.fetchone())
         conn.commit()
-        return Quest(**dict(cur.fetchone()))
+        return Quest(**row)
     finally:
         release_connection(conn)
 

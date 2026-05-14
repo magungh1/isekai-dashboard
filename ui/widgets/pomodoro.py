@@ -14,14 +14,34 @@ IDLE = "idle"
 WORK = "work"
 BREAK = "break"
 
-WORK_MINUTES = 25
-BREAK_MINUTES = 5
 
-POMO_PRESETS = [
-    (25, 5, "25/5"),
-    (50, 10, "50/10"),
-    (15, 3, "15/3"),
-]
+def _get_presets() -> list[tuple[int, int, str]]:
+    from config import get_list
+    raw = get_list("pomodoro", "presets")
+    presets = []
+    for item in raw:
+        parts = str(item).split(":")
+        if len(parts) == 2:
+            presets.append((int(parts[0]), int(parts[1]), f"{parts[0]}/{parts[1]}"))
+    return presets or [(25, 5, "25/5"), (50, 10, "50/10"), (15, 3, "15/3")]
+
+
+def _send_macos_notification(title: str, message: str) -> None:
+    from config import get
+    sound = get("pomodoro", "notification_sound") or "Glass"
+    try:
+        subprocess.Popen([
+            'osascript', '-e',
+            f'display notification "{message}" with title "{title}" sound name "{sound}"'
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+
+def _max_sessions() -> int:
+    from config import get_int
+    return get_int("pomodoro", "max_sessions", default=4)
+
 
 FGO_QUOTES = [
     ("King Hassan",
@@ -59,19 +79,7 @@ FGO_QUOTES = [
 ]
 
 
-def _send_macos_notification(title: str, message: str) -> None:
-    try:
-        subprocess.Popen([
-            'osascript', '-e',
-            f'display notification "{message}" with title "{title}" sound name "Glass"'
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass
-
-
 class Pomodoro(Static):
-    """Pomodoro timer with FGO motivational quotes and session tracking."""
-
     BINDINGS = [
         Binding("s", "toggle_timer", "Start/Pause", show=True),
         Binding("r", "reset_timer", "Reset", show=True),
@@ -80,12 +88,13 @@ class Pomodoro(Static):
     can_focus = True
 
     def __init__(self, **kwargs) -> None:
+        from config import get_int
         super().__init__(**kwargs)
         self._phase = IDLE
-        self._work_minutes = WORK_MINUTES
-        self._break_minutes = BREAK_MINUTES
-        self._seconds_left = WORK_MINUTES * 60
-        self._total_seconds = WORK_MINUTES * 60
+        self._work_minutes = get_int("pomodoro", "work_minutes", default=25)
+        self._break_minutes = get_int("pomodoro", "break_minutes", default=5)
+        self._seconds_left = self._work_minutes * 60
+        self._total_seconds = self._work_minutes * 60
         self._timer: Timer | None = None
         self._current_quote = random.choice(FGO_QUOTES)
         self._sessions_today = 0
@@ -99,7 +108,7 @@ class Pomodoro(Static):
             yield Label(self._format_time(), id="pomo-timer", classes="kana-large")
         yield ProgressBar(id="pomo-progress", total=100, show_eta=False, show_percentage=False)
         with Horizontal(id="pomo-presets"):
-            for work_m, brk, label in POMO_PRESETS:
+            for work_m, brk, label in _get_presets():
                 yield Button(label, id=f"pomo-preset-{work_m}-{brk}", classes="pomo-preset-btn")
         with Horizontal(id="pomo-actions"):
             yield Button("Start", id="pomo-start-btn", variant="success")
@@ -114,7 +123,8 @@ class Pomodoro(Static):
         self._update_active_preset()
         self._update_phase_class()
         self._update_progress()
-        self.set_interval(300, self._change_quote)
+        quote_interval = get_int("pomodoro", "quote_interval", default=300)
+        self.set_interval(quote_interval, self._change_quote)
 
     @work(thread=True)
     def _load_sessions(self) -> None:
@@ -128,7 +138,7 @@ class Pomodoro(Static):
     def _update_active_preset(self) -> None:
         for btn in self.query(".pomo-preset-btn"):
             btn.remove_class("active")
-        for work_m, brk, _label in POMO_PRESETS:
+        for work_m, brk, _label in _get_presets():
             if work_m == self._work_minutes and brk == self._break_minutes:
                 try:
                     self.query_one(f"#pomo-preset-{work_m}-{brk}", Button).add_class("active")
@@ -149,7 +159,7 @@ class Pomodoro(Static):
         self.query_one("#pomo-author", Label).update(f"— {author}")
 
     def _update_session_display(self) -> None:
-        pips = "●" * self._sessions_today + "○" * max(0, 4 - self._sessions_today)
+        pips = "●" * self._sessions_today + "○" * max(0, _max_sessions() - self._sessions_today)
         self.query_one("#pomo-sessions", Label).update(
             f"Sessions: {pips} ({self._sessions_today} today)"
         )

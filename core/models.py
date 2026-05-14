@@ -6,9 +6,9 @@ from datetime import datetime
 class Quest:
     id: int
     title: str
-    status: str  # 'pending' or 'done'
+    status: str
     created_at: str
-    category: str = 'daily'  # 'daily', 'weekly', 'goals'
+    category: str = 'daily'
     deadline: str | None = None
     sort_order: int = 0
 
@@ -26,6 +26,9 @@ class KanaCard:
     level: int
     next_review: str
     type: str = 'katakana'
+    review_count: int = 0
+    last_reviewed: str | None = None
+    created_at: str | None = None
 
 
 @dataclass
@@ -38,6 +41,9 @@ class KanjiCard:
     mnemonic: str | None
     level: int
     next_review: str
+    review_count: int = 0
+    last_reviewed: str | None = None
+    created_at: str | None = None
 
 
 @dataclass
@@ -50,3 +56,6 @@ class VocabCard:
     part_of_speech: str
     level: int
     next_review: str
+    review_count: int = 0
+    last_reviewed: str | None = None
+    created_at: str | None = None

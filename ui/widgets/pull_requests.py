@@ -112,11 +112,19 @@ class PullRequests(Static):
         yield Button("🔄", id="pr-refresh-btn", classes="pr-refresh-btn")
 
     def on_mount(self) -> None:
+        from config import get_float
         self._last_pr_keys: set[tuple] = set()
         self._last_notif_ids: set[str] = set()
         self._gh_notified = False
         self._approved_prs: set[tuple] = set()
         self._hidden_prs: set[tuple] = set()
+        self.fetch_prs()
+        refresh = get_float("github", "refresh_interval", default=300.0)
+        self.set_interval(refresh, self._auto_refresh_prs)
+
+    def _auto_refresh_prs(self) -> None:
+        self._last_pr_keys = set()
+        self._last_notif_ids = set()
         self.fetch_prs()
 
     @work(thread=True, exclusive=True)
@@ -147,7 +155,7 @@ class PullRequests(Static):
                     self.app.notify,
                     "GitHub CLI not available. Install from https://cli.github.com/",
                     severity="error",
-                    timeout=10,
+                    timeout=get_int("github", "notify_timeout", default=10),
                 )
                 self._gh_notified = True
             # Don't clear existing UI on transient fetch failures
@@ -177,7 +185,9 @@ class PullRequests(Static):
         # Send notifications for newly approved PRs
         for pr in newly_approved:
             title = pr['title']
-            title_snippet = title[:50] + "..." if len(title) > 50 else title
+            from config import get_int
+            snippet_len = get_int("github", "title_snippet_length", default=50)
+            title_snippet = title[:snippet_len] + "..." if len(title) > snippet_len else title
             self.app.call_from_thread(
                 self.app.notify,
                 f"PR #{pr['number']} approved! ✅\n{title_snippet}",

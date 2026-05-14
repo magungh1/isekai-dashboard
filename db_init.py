@@ -216,7 +216,10 @@ def init_db(conn=None, *, close=True):
             mnemonic TEXT,
             level INTEGER NOT NULL DEFAULT 0,
             next_review TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            type TEXT NOT NULL DEFAULT 'katakana'
+            type TEXT NOT NULL DEFAULT 'katakana',
+            review_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
 
@@ -229,7 +232,10 @@ def init_db(conn=None, *, close=True):
             mnemonic TEXT,
             part_of_speech TEXT NOT NULL DEFAULT 'noun',
             level INTEGER NOT NULL DEFAULT 0,
-            next_review TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            next_review TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            review_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
 
@@ -242,7 +248,22 @@ def init_db(conn=None, *, close=True):
             meaning TEXT NOT NULL,
             mnemonic TEXT,
             level INTEGER NOT NULL DEFAULT 0,
-            next_review TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            next_review TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            review_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS srs_reviews (
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            deck TEXT NOT NULL,
+            card_id BIGINT NOT NULL,
+            rating TEXT NOT NULL,
+            prev_level INTEGER NOT NULL DEFAULT 0,
+            new_level INTEGER NOT NULL DEFAULT 0,
+            reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
     """)
 

@@ -1,11 +1,17 @@
 from datetime import date, timedelta
 
+from config import get_int
 from core.db import get_shared_connection, release_connection
 
-XP_QUEST_COMPLETE = 10
-XP_SRS_REVIEW = 5
-XP_POMODORO_COMPLETE = 25
-LEVEL_BASE = 50
+
+def _xp_val(key: str, default: int) -> int:
+    return get_int("xp", key, default=default)
+
+
+XP_QUEST_COMPLETE = _xp_val("quest_complete", 10)
+XP_SRS_REVIEW = _xp_val("srs_review", 5)
+XP_POMODORO_COMPLETE = _xp_val("pomodoro_complete", 25)
+LEVEL_BASE = _xp_val("level_base", 50)
 
 
 def _ensure_xp_table():

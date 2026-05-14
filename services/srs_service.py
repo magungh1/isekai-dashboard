@@ -5,7 +5,12 @@ from core.db import get_shared_connection, release_connection
 from core.models import KanaCard
 from config import get
 
-SRS_INTERVALS = {i: v for i, v in enumerate(get("srs", "intervals", [0, 4, 24, 72, 168, 720]))}
+SRS_INTERVALS = {i: v for i, v in enumerate(get("srs", "intervals"))}
+
+
+def _mastery_level() -> int:
+    from config import get_int
+    return get_int("srs", "mastery_level", default=4)
 
 
 def get_due_cards(limit: int = 10, kana_type: str | None = None) -> list[KanaCard]:
@@ -38,6 +43,22 @@ def get_card_by_id(card_id: int) -> KanaCard | None:
         release_connection(conn)
 
 
+def _log_review(card_id: int, rating: str, prev_level: int, new_level: int):
+    conn = get_shared_connection()
+    try:
+        conn.execute(
+            "INSERT INTO srs_reviews (deck, card_id, rating, prev_level, new_level) VALUES (%s, %s, %s, %s, %s)",
+            ('kana', card_id, rating, prev_level, new_level),
+        )
+        conn.execute(
+            "UPDATE kana_srs SET review_count = COALESCE(review_count, 0) + 1, last_reviewed = %s WHERE id = %s",
+            (datetime.now().isoformat(), card_id),
+        )
+        conn.commit()
+    finally:
+        release_connection(conn)
+
+
 def review_card(card_id: int, rating: str) -> KanaCard:
     conn = get_shared_connection()
     try:
@@ -61,9 +82,11 @@ def review_card(card_id: int, rating: str) -> KanaCard:
             (new_level, next_review, card_id),
         )
         conn.commit()
-        return get_card_by_id(card_id)
     finally:
         release_connection(conn)
+
+    _log_review(card_id, rating, card.level, new_level)
+    return get_card_by_id(card_id)
 
 
 def save_mnemonic(card_id: int, mnemonic: str) -> None:
@@ -79,14 +102,15 @@ def get_stats(kana_type: str | None = None) -> dict:
     conn = get_shared_connection()
     try:
         now = datetime.now().isoformat()
+        ml = _mastery_level()
         if kana_type:
             total = conn.execute("SELECT COUNT(*) FROM kana_srs WHERE type = %s", (kana_type,)).fetchone()[0]
             due = conn.execute("SELECT COUNT(*) FROM kana_srs WHERE next_review <= %s AND type = %s", (now, kana_type)).fetchone()[0]
-            mastered = conn.execute("SELECT COUNT(*) FROM kana_srs WHERE level >= %s AND type = %s", (4, kana_type)).fetchone()[0]
+            mastered = conn.execute("SELECT COUNT(*) FROM kana_srs WHERE level >= %s AND type = %s", (ml, kana_type)).fetchone()[0]
         else:
             total = conn.execute("SELECT COUNT(*) FROM kana_srs").fetchone()[0]
             due = conn.execute("SELECT COUNT(*) FROM kana_srs WHERE next_review <= %s", (now,)).fetchone()[0]
-            mastered = conn.execute("SELECT COUNT(*) FROM kana_srs WHERE level >= %s", (4,)).fetchone()[0]
+            mastered = conn.execute("SELECT COUNT(*) FROM kana_srs WHERE level >= %s", (ml,)).fetchone()[0]
         return {"total": total, "due": due, "mastered": mastered}
     finally:
         release_connection(conn)
