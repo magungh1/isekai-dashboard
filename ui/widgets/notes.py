@@ -2,7 +2,7 @@
 
 from textual import work
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Static, Label, ListView, ListItem, Input, TabbedContent, TabPane, Button
 
 from services.notes_service import get_notes, add_note, update_note, delete_note, CATEGORIES

@@ -159,6 +159,11 @@ class _SupabaseRestCursor:
 
     def _select(self, sql, params):
         params = list(params or [])
+
+        rpc_match = re.match(r'SELECT\s+\*\s+FROM\s+(\w+)\s*\(([^)]*)\)', sql, re.I)
+        if rpc_match:
+            return self._rpc(rpc_match.group(1), params)
+
         table = self._parse_table(sql)
         if not table:
             return self
@@ -244,6 +249,17 @@ class _SupabaseRestCursor:
 
         return self
 
+    def _rpc(self, func_name, params):
+        url = f"{_SUPABASE_URL}/rest/v1/rpc/{func_name}"
+        payload = {"qid": params[0]} if len(params) == 1 else params
+        r = requests.post(url, headers=_SUPABASE_HEADERS, json=payload, timeout=30)
+        if not r.ok:
+            logger.error("RPC %s failed [%d]: %s", func_name, r.status_code, r.text)
+        r.raise_for_status()
+        data = r.json() if r.text else []
+        self._results = _wrap_rows(data if isinstance(data, list) else [data])
+        return self
+
     def _build_filters(self, where_clause, params):
         where_clause = re.sub(r'\b1\s*=\s*1\s+AND\s+', '', where_clause).strip()
         where_clause = re.sub(r'\s+AND\s+1\s*=\s*1', '', where_clause).strip()
@@ -307,9 +323,10 @@ class _SupabaseRestCursor:
 
         if is_upsert:
             conflict_match = re.search(r'ON CONFLICT\s*\((\w+)\)', sql, re.I)
+            upsert_headers = {**_SUPABASE_HEADERS, "Prefer": "resolution=merge-duplicates"}
             if conflict_match:
                 req_params = {"on_conflict": conflict_match.group(1)}
-                r = requests.post(url, headers=_SUPABASE_HEADERS, json=row, params=req_params, timeout=30)
+                r = requests.post(url, headers=upsert_headers, json=row, params=req_params, timeout=30)
             else:
                 r = requests.post(url, headers=_SUPABASE_HEADERS, json=row, timeout=30)
         else:
@@ -338,8 +355,12 @@ class _SupabaseRestCursor:
         set_parts = [s.strip() for s in set_match.group(1).split(",")]
         update_data = {}
         for part in set_parts:
-            col = part.split("=")[0].strip()
-            update_data[col] = params.pop(0)
+            placeholders = re.findall(r'%s', part)
+            if len(placeholders) == 1:
+                col = part.split("=")[0].strip()
+                update_data[col] = params.pop(0)
+            else:
+                raise NotImplementedError("CASE WHEN in UPDATE not supported over PostgREST REST API")
 
         where = self._parse_where(sql)
         url = f"{_SUPABASE_URL}/rest/v1/{table}"

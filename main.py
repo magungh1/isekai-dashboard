@@ -37,15 +37,15 @@ from textual.containers import Grid
 from textual.widgets import Header, Footer
 
 from ui.widgets.daily_quests import DailyQuests
-from ui.widgets.pomodoro import Pomodoro
+from ui.widgets.pomo_notes_tabs import PomoNotesTabs
 from ui.widgets.pull_requests import PullRequests
 from ui.widgets.calendar import Calendar
 from ui.widgets.srs_tabs import SRSTabs
 from ui.widgets.now_playing import NowPlaying
-from ui.widgets.notes import NotesWidget
 from ui.widgets.xp_bar import XPBar
 
 from config import get, get_browser, log_config
+from core.db import _use_supabase
 
 
 class IsekaiDashboard(App):
@@ -58,7 +58,7 @@ class IsekaiDashboard(App):
         ("a", "quick_add_quest", "Add Quest"),
     ]
 
-    _widget_classes = [DailyQuests, Pomodoro, PullRequests, Calendar, SRSTabs, NowPlaying, NotesWidget]
+    _widget_classes = [DailyQuests, PomoNotesTabs, PullRequests, Calendar, SRSTabs, NowPlaying]
     _pending_g: bool = False
 
     def on_key(self, event: events.Key) -> None:
@@ -86,12 +86,11 @@ class IsekaiDashboard(App):
         yield XPBar(id="xp-bar")
         with Grid(id="dashboard-grid"):
             yield DailyQuests(classes="tool-widget")
-            yield Pomodoro(classes="tool-widget")
+            yield PomoNotesTabs(classes="tool-widget")
             yield PullRequests(classes="tool-widget")
             yield Calendar(classes="tool-widget")
             yield SRSTabs(classes="tool-widget")
             yield NowPlaying(classes="tool-widget")
-            yield NotesWidget(classes="tool-widget")
         yield Footer()
 
     def action_focus_widget(self, index: int) -> None:

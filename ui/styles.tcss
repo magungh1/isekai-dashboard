@@ -52,24 +52,21 @@ Screen {
 
 #dashboard-grid {
     layout: grid;
-    grid-size: 12 3;
-    grid-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
-    grid-rows: 1fr 1fr 1fr;
+    grid-size: 6 2;
+    grid-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    grid-rows: 1fr 1fr;
     padding: 1;
 }
 
 /* Top row: 3 widgets each spanning 2 columns */
 DailyQuests { column-span: 2; }
-Pomodoro { column-span: 2; }
+PomoNotesTabs { column-span: 2; }
 PullRequests { column-span: 2; }
 
-/* Middle row: 3 widgets each spanning 2 columns */
+/* Bottom row: 3 widgets each spanning 2 columns */
 Calendar { column-span: 2; }
 SRSTabs { column-span: 2; }
 NowPlaying { column-span: 2; }
-
-/* Bottom row: Notes spans full width */
-NotesWidget { column-span: 4; }
 
 .tool-widget {
     border: tall #00ffcc 40%;
@@ -171,7 +168,7 @@ NotesWidget { column-span: 4; }
 }
 
 #quest-tabs {
-    height: 100%;
+    height: 1fr;
 }
 
 QuestTab {
@@ -180,8 +177,20 @@ QuestTab {
 }
 
 .quest-list {
-    max-height: 12;
-    height: auto;
+    height: 1fr;
+    overflow-y: scroll;
+    scrollbar-color: #30363d;
+    scrollbar-color-hover: #00ffcc;
+    scrollbar-color-active: #00ffcc;
+    scrollbar-background: #161b22;
+}
+
+.quest-input {
+    margin-top: 1;
+    background: #0d1117;
+    border: tall #00ffcc 50%;
+    color: #e6edf3;
+    width: 100%;
 }
 
 #pr-list, #cal-list {
@@ -631,6 +640,21 @@ NotificationItem Horizontal Label {
     background: #238636;
     color: #ffffff;
     border: none;
+}
+
+#pr-refresh-btn {
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    background: #30363d;
+    color: #8b949e;
+    border: none;
+    margin-top: 1;
+}
+
+#pr-refresh-btn:hover {
+    background: #484f58;
+    color: #e6edf3;
 }
 
 /* Notes widget */

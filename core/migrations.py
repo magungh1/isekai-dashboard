@@ -38,9 +38,9 @@ def set_version(version: int) -> None:
     conn = get_shared_connection()
     try:
         conn.execute(
-            "INSERT INTO meta (key, value) VALUES ('schema_version', %s) "
+            "INSERT INTO meta (key, value) VALUES (%s, %s) "
             "ON CONFLICT (key) DO UPDATE SET value = %s",
-            (str(version), str(version)),
+            ('schema_version', str(version), str(version)),
         )
         conn.commit()
     finally:
@@ -110,6 +110,14 @@ MIGRATION_SQL = {
         CREATE INDEX IF NOT EXISTS idx_quests_cat ON quests (category, status, sort_order);
         CREATE INDEX IF NOT EXISTS idx_xp_log_date ON xp_log (created_date);
         CREATE INDEX IF NOT EXISTS idx_notes_category ON notes (category, created_at);
+    """,
+    4: """
+        -- v4: Add toggle_quest RPC function
+        CREATE OR REPLACE FUNCTION toggle_quest(qid bigint)
+        RETURNS SETOF quests AS $$
+          UPDATE quests SET status = CASE WHEN status = 'pending' THEN 'done' ELSE 'pending' END
+          WHERE id = qid RETURNING *;
+        $$ LANGUAGE sql;
     """,
 }
 
