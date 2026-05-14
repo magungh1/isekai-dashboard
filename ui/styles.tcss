@@ -52,9 +52,9 @@ Screen {
 
 #dashboard-grid {
     layout: grid;
-    grid-size: 6 2;
-    grid-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-    grid-rows: 1fr 1fr;
+    grid-size: 12 3;
+    grid-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    grid-rows: 1fr 1fr 1fr;
     padding: 1;
 }
 
@@ -63,10 +63,13 @@ DailyQuests { column-span: 2; }
 Pomodoro { column-span: 2; }
 PullRequests { column-span: 2; }
 
-/* Bottom row: 3 widgets each spanning 2 columns */
+/* Middle row: 3 widgets each spanning 2 columns */
 Calendar { column-span: 2; }
 SRSTabs { column-span: 2; }
 NowPlaying { column-span: 2; }
+
+/* Bottom row: Notes spans full width */
+NotesWidget { column-span: 4; }
 
 .tool-widget {
     border: tall #00ffcc 40%;
@@ -624,6 +627,48 @@ NotificationItem Horizontal Label {
 .notif-dismiss-btn {
     min-width: 3;
     max-width: 3;
+    height: 1;
+    background: #238636;
+    color: #ffffff;
+    border: none;
+}
+
+/* Notes widget */
+.note-text {
+    color: #c9d1d9;
+    width: 100%;
+    height: auto;
+}
+
+.note-list {
+    max-height: 10;
+    height: auto;
+}
+
+.note-count {
+    color: #8b949e;
+    margin: 1 0;
+}
+
+.note-input, .note-quick-input {
+    background: #0d1117;
+    border: tall #00ffcc 50%;
+    color: #e6edf3;
+    height: auto;
+}
+
+.note-add-btn {
+    min-width: 4;
+    max-width: 4;
+    height: 1;
+    background: #238636;
+    color: #ffffff;
+    border: none;
+}
+
+.note-save-btn {
+    min-width: 6;
+    max-width: 6;
     height: 1;
     background: #238636;
     color: #ffffff;

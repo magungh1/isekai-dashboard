@@ -42,6 +42,7 @@ from ui.widgets.pull_requests import PullRequests
 from ui.widgets.calendar import Calendar
 from ui.widgets.srs_tabs import SRSTabs
 from ui.widgets.now_playing import NowPlaying
+from ui.widgets.notes import NotesWidget
 from ui.widgets.xp_bar import XPBar
 
 from config import get, get_browser, log_config
@@ -57,7 +58,7 @@ class IsekaiDashboard(App):
         ("a", "quick_add_quest", "Add Quest"),
     ]
 
-    _widget_classes = [DailyQuests, Pomodoro, PullRequests, Calendar, SRSTabs, NowPlaying]
+    _widget_classes = [DailyQuests, Pomodoro, PullRequests, Calendar, SRSTabs, NowPlaying, NotesWidget]
     _pending_g: bool = False
 
     def on_key(self, event: events.Key) -> None:
@@ -90,6 +91,7 @@ class IsekaiDashboard(App):
             yield Calendar(classes="tool-widget")
             yield SRSTabs(classes="tool-widget")
             yield NowPlaying(classes="tool-widget")
+            yield NotesWidget(classes="tool-widget")
         yield Footer()
 
     def action_focus_widget(self, index: int) -> None:
@@ -117,6 +119,13 @@ class IsekaiDashboard(App):
         logger.info("Browser configured: %s", browser)
         if not os.path.exists(db_path):
             self.notify("Database not found. Run: python db_init.py", severity="warning")
+
+        # Run pending Supabase migrations on startup
+        if _use_supabase:
+            from core.migrations import run_migrations
+            applied = run_migrations()
+            if applied:
+                self.notify(f"Migrated: v{', v'.join(str(v) for v in applied)}", severity="information")
 
 
 if __name__ == "__main__":
