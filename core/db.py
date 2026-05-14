@@ -1,21 +1,23 @@
-import sqlite3
 import os
-import threading
+import psycopg2
+import psycopg2.pool
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'isekai.db')
+# ── Supabase connection ─────────────────────────────────────────
+DB_URL = (
+    f"host={os.environ['SUPABASE_URL'].replace('https://', '').replace('http://', '').rstrip('/')}"
+    f" dbname=postgres user=postgres"
+    f" password={os.environ['SUPABASE_SERVICE_KEY']}"
+    f" port=5432 sslmode=require"
+)
 
-db_lock = threading.Lock()
+_pool = psycopg2.pool.ThreadedConnectionPool(2, 10, DB_URL)
 
-def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+
+def get_shared_connection():
+    conn = _pool.getconn()
+    conn.autocommit = False
     return conn
 
-# Shared connection for the app lifetime
-_conn: sqlite3.Connection | None = None
 
-def get_shared_connection() -> sqlite3.Connection:
-    global _conn
-    if _conn is None:
-        _conn = get_connection()
-    return _conn
+def release_connection(conn):
+    _pool.putconn(conn)

@@ -1,62 +1,59 @@
-import sqlite3
+import psycopg2.errors
 import csv
 import sys
 import os
 
-DB_PATH = 'isekai.db'
+from core.db import get_shared_connection, release_connection
+
 
 def ingest_csv(csv_path):
     if not os.path.exists(csv_path):
         print(f"Error: {csv_path} does not exist.")
         sys.exit(1)
 
-    if not os.path.exists(DB_PATH):
-        print(f"Error: Database {DB_PATH} does not exist. Please run 'make init' first.")
-        sys.exit(1)
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
+    conn = get_shared_connection()
     count = 0
-    with open(csv_path, 'r', encoding='utf-8') as f:
+
+    with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.reader(f)
         for row in reader:
-            # Skip empty lines and comments
-            if not row or row[0].startswith('#'):
+            if not row or row[0].startswith("#"):
                 continue
-            
-            # Ensure the row has word, type, and meaning
+
             if len(row) >= 3:
                 word = row[0].strip()
                 word_type = row[1].strip()
                 meaning = row[2].strip()
-                
+
                 try:
-                    if word_type == 'kanji':
+                    if word_type == "kanji":
                         kun_reading = row[3].strip() if len(row) > 3 else ""
                         on_reading = row[4].strip() if len(row) > 4 else ""
-                        
-                        cursor.execute(
-                            'INSERT INTO kanji_srs (kanji, kun_reading, on_reading, meaning) VALUES (?, ?, ?, ?)',
-                            (word, kun_reading, on_reading, meaning)
+
+                        conn.execute(
+                            "INSERT INTO kanji_srs "
+                            "(kanji, kun_reading, on_reading, meaning) "
+                            "VALUES (%s, %s, %s, %s)",
+                            (word, kun_reading, on_reading, meaning),
                         )
                     else:
-                        cursor.execute(
-                            'INSERT INTO kana_srs (word, meaning, type) VALUES (?, ?, ?)',
-                            (word, meaning, word_type)
+                        conn.execute(
+                            "INSERT INTO kana_srs "
+                            "(word, meaning, type) VALUES (%s, %s, %s)",
+                            (word, meaning, word_type),
                         )
                     count += 1
-                except sqlite3.IntegrityError:
-                    # Word already exists in DB, skip
-                    pass
+                except psycopg2.errors.UniqueViolation:
+                    conn.rollback()
 
     conn.commit()
-    conn.close()
-    print(f"Successfully ingested {count} new vocabularies from {csv_path} into the database.")
+    release_connection(conn)
+    print(f"Successfully ingested {count} new vocabularies into the database.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python ingest_csv.py <path_to_csv>")
         sys.exit(1)
-        
+
     ingest_csv(sys.argv[1])
