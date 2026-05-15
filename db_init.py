@@ -250,6 +250,22 @@ def init_db(conn=None, *, close=True):
     except Exception:
         pass
 
+    try:
+        count_row = conn.execute("SELECT COUNT(*) FROM habits").fetchone()
+        if count_row and count_row[0] == 0:
+            for name, icon, xp, countable, target in [
+                ("Exercise", "🏋", 5, False, 1),
+                ("Read", "📚", 5, False, 1),
+                ("Meditate", "🧘", 5, False, 1),
+                ("8 Glasses Water", "💧", 5, True, 8),
+            ]:
+                conn.execute(
+                    "INSERT INTO habits (name, icon, xp_reward, is_countable, target_count) VALUES (%s, %s, %s, %s, %s)",
+                    (name, icon, xp, int(countable), target),
+                )
+    except Exception:
+        pass
+
     if own_conn:
         conn.commit()
         release_connection(conn)

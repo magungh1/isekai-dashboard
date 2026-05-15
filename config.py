@@ -47,6 +47,11 @@ _defaults = {
         "level_base": "50",
         "refresh_interval": "10",
     },
+    "habits": {
+        "default_xp": "5",
+        "streak_bonus_7": "20",
+        "streak_bonus_30": "100",
+    },
     "db": {
         "pool_min": "2",
         "pool_max": "10",

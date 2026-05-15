@@ -699,3 +699,150 @@ NotificationItem Horizontal Label {
     border: none;
 }
 
+/* Habit Tracker */
+.habit-week-label {
+    text-align: center;
+    color: #d29922;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.habit-list {
+    height: 1fr;
+    overflow-y: scroll;
+    scrollbar-color: #30363d;
+    scrollbar-color-hover: #00ffcc;
+    scrollbar-color-active: #00ffcc;
+    scrollbar-background: #161b22;
+}
+
+.habit-row {
+    height: auto;
+    width: 100%;
+}
+
+.habit-name {
+    width: auto;
+    min-width: 14;
+    color: #e6edf3;
+    text-style: bold;
+}
+
+.habit-streak {
+    width: auto;
+    min-width: 4;
+    text-align: center;
+    color: #ff6b35;
+    text-style: bold;
+}
+
+.habit-day-cell {
+    min-width: 3;
+    max-width: 3;
+    height: 1;
+    text-align: center;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.habit-day-cell:hover {
+    background: #1c2333;
+}
+
+.habit-done {
+    color: #2ea043;
+}
+
+.habit-skipped {
+    color: #8b949e;
+}
+
+.habit-missed {
+    color: #f85149;
+}
+
+.habit-empty {
+    color: #484f58;
+}
+
+.habit-actions {
+    height: auto;
+    width: 100%;
+    margin-top: 1;
+}
+
+.habit-input {
+    background: #0d1117;
+    border: tall #00ffcc 50%;
+    color: #e6edf3;
+    height: auto;
+    width: 1fr;
+}
+
+.habit-add-btn {
+    min-width: 4;
+    max-width: 4;
+    height: 1;
+    background: #238636;
+    color: #ffffff;
+    border: none;
+}
+
+/* Command Palette */
+#cmd-palette {
+    dock: top;
+    height: auto;
+    max-height: 20;
+    background: #1c2333;
+    border: tall #ffd700;
+    padding: 1;
+}
+
+#cmd-input {
+    background: #0d1117;
+    border: tall #00ffcc 60%;
+    color: #e6edf3;
+    height: auto;
+    width: 100%;
+}
+
+#cmd-list {
+    height: auto;
+    max-height: 14;
+    overflow-y: scroll;
+    scrollbar-color: #30363d;
+    scrollbar-color-hover: #00ffcc;
+    scrollbar-color-active: #00ffcc;
+    scrollbar-background: #1c2333;
+}
+
+CmdItem {
+    background: transparent;
+    padding: 0 1;
+}
+
+CmdItem:hover {
+    background: #1c2333;
+}
+
+CmdItem:focus {
+    background: #1c2333;
+}
+
+.cmd-item-row {
+    height: auto;
+    width: 100%;
+}
+
+.cmd-name {
+    color: #e6edf3;
+    width: 1fr;
+}
+
+.cmd-source {
+    color: #8b949e;
+    width: auto;
+    margin-right: 1;
+}
+

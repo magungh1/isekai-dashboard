@@ -119,6 +119,49 @@ MIGRATION_SQL = {
           WHERE id = qid RETURNING *;
         $$ LANGUAGE sql;
     """,
+    5: """
+        -- v5: Add habits and habit_log tables
+        CREATE TABLE IF NOT EXISTS habits (
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            name TEXT NOT NULL,
+            icon TEXT NOT NULL DEFAULT '📌',
+            category TEXT NOT NULL DEFAULT 'daily',
+            xp_reward INTEGER NOT NULL DEFAULT 5,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_date TEXT NOT NULL DEFAULT CURRENT_DATE,
+            is_countable INTEGER NOT NULL DEFAULT 0,
+            target_count INTEGER NOT NULL DEFAULT 1
+        );
+
+        CREATE TABLE IF NOT EXISTS habit_log (
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            habit_id BIGINT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'done',
+            count INTEGER NOT NULL DEFAULT 1,
+            note TEXT,
+            UNIQUE(habit_id, date)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_habit_log_date ON habit_log (date);
+        CREATE INDEX IF NOT EXISTS idx_habit_log_habit ON habit_log (habit_id, date);
+        CREATE INDEX IF NOT EXISTS idx_habits_category ON habits (category, sort_order);
+    """,
+    6: """
+        -- v6: Add srs_reviews table (was only in init_schema, not migrations)
+        CREATE TABLE IF NOT EXISTS srs_reviews (
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            deck TEXT NOT NULL,
+            card_id BIGINT NOT NULL,
+            rating TEXT NOT NULL,
+            prev_level INTEGER NOT NULL DEFAULT 0,
+            new_level INTEGER NOT NULL DEFAULT 0,
+            reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_srs_reviews_card ON srs_reviews (deck, card_id);
+        CREATE INDEX IF NOT EXISTS idx_srs_reviews_date ON srs_reviews (reviewed_at);
+    """,
 }
 
 
@@ -278,6 +321,37 @@ def init_schema(conn=None, *, close=True) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_quests_cat ON quests (category, status, sort_order)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_xp_log_date ON xp_log (created_date)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_notes_category ON notes (category, created_at)")
+
+    # Habits (v5 migration)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS habits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            icon TEXT NOT NULL DEFAULT '📌',
+            category TEXT NOT NULL DEFAULT 'daily',
+            xp_reward INTEGER NOT NULL DEFAULT 5,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_date TEXT NOT NULL DEFAULT (date('now')),
+            is_countable INTEGER NOT NULL DEFAULT 0,
+            target_count INTEGER NOT NULL DEFAULT 1
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS habit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            habit_id INTEGER NOT NULL REFERENCES habits(id),
+            date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'done',
+            count INTEGER NOT NULL DEFAULT 1,
+            note TEXT,
+            UNIQUE(habit_id, date)
+        )
+    """)
+
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_habit_log_date ON habit_log (date)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_habit_log_habit ON habit_log (habit_id, date)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_habits_category ON habits (category, sort_order)")
 
     # Set schema version to latest
     if own_conn:

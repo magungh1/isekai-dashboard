@@ -13,6 +13,7 @@ from services.quests_service import (
 )
 from services.xp_service import add_xp, XP_QUEST_COMPLETE
 from core.models import Quest
+from ui.widgets.habits import HabitsWidget
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +312,8 @@ class DailyQuests(Static):
                 yield QuestTab(category="goals")
             with TabPane("✅ Done", id="tab-done"):
                 yield QuestTab(category="done")
+            with TabPane("📊 Habits", id="tab-habits"):
+                yield HabitsWidget()
 
     def _run_resets(self) -> None:
         reset_daily_quests()

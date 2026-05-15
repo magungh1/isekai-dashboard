@@ -21,7 +21,8 @@ def test_add_quest_with_category():
 def test_add_quest_with_deadline():
     quest = add_quest("Learn transformers", category="goals", deadline="2026-06-01")
     assert quest.category == "goals"
-    assert quest.deadline == "2026-06-01"
+    # Supabase returns full ISO datetime, SQLite returns just date
+    assert quest.deadline.startswith("2026-06-01")
 
 
 def test_get_all_quests():

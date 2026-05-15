@@ -47,6 +47,8 @@ class _SupabaseRestCursor:
 
     def execute(self, query, params=None):
         query = query.strip()
+        # Normalize ? placeholders to %s for Supabase compatibility
+        query = query.replace("?", "%s")
         upper = query.upper()
 
         if upper.startswith("CREATE"):
@@ -303,7 +305,7 @@ class _SupabaseRestCursor:
 
     def _insert(self, sql, params):
         params = list(params or [])
-        is_upsert = "ON CONFLICT" in sql.upper()
+        is_upsert = "ON CONFLICT" in sql.upper() or "OR REPLACE" in sql.upper()
         table = self._parse_into_table(sql)
         if not table:
             return self
@@ -317,7 +319,16 @@ class _SupabaseRestCursor:
 
         row = {}
         for col in cols:
-            row[col] = params.pop(0)
+            if params:
+                row[col] = params.pop(0)
+            else:
+                # Inline values: extract from VALUES ('val1', 'val2')
+                vals_match = re.search(r'VALUES\s*\((.+)\)', sql, re.I)
+                if vals_match:
+                    raw_vals = [v.strip().strip("'\"") for v in vals_match.group(1).split(",")]
+                    for c, v in zip(cols, raw_vals):
+                        row[c] = v
+                    break
 
         url = f"{_SUPABASE_URL}/rest/v1/{table}"
 
@@ -328,7 +339,7 @@ class _SupabaseRestCursor:
                 req_params = {"on_conflict": conflict_match.group(1)}
                 r = requests.post(url, headers=upsert_headers, json=row, params=req_params, timeout=30)
             else:
-                r = requests.post(url, headers=_SUPABASE_HEADERS, json=row, timeout=30)
+                r = requests.post(url, headers=upsert_headers, json=row, timeout=30)
         else:
             r = requests.post(url, headers=_SUPABASE_HEADERS, json=row, timeout=30)
 
@@ -352,24 +363,90 @@ class _SupabaseRestCursor:
         if not set_match:
             return self
 
-        set_parts = [s.strip() for s in set_match.group(1).split(",")]
+        # Split SET parts respecting parentheses (for COALESCE, etc.)
+        set_clause = set_match.group(1)
+        set_parts = []
+        depth = 0
+        current = ""
+        for char in set_clause:
+            if char == "(":
+                depth += 1
+                current += char
+            elif char == ")":
+                depth -= 1
+                current += char
+            elif char == "," and depth == 0:
+                set_parts.append(current.strip())
+                current = ""
+            else:
+                current += char
+        if current.strip():
+            set_parts.append(current.strip())
+
+        # Count placeholders in SET clause to determine WHERE param offset
+        set_placeholder_count = sum(len(re.findall(r'%s', part)) for part in set_parts)
+
+        # Parse WHERE clause to extract filter values
+        where = self._parse_where(sql)
+        where_filters = []
+        if where:
+            where_parts = re.split(r'\s+AND\s+', where)
+            where_param_idx = set_placeholder_count
+            for part in where_parts:
+                part = part.strip()
+                m = re.match(r"(\w+)\s*=\s*%s", part)
+                if m and where_param_idx < len(params):
+                    where_filters.append((m.group(1), params[where_param_idx]))
+                    where_param_idx += 1
+
         update_data = {}
         for part in set_parts:
             placeholders = re.findall(r'%s', part)
             if len(placeholders) == 1:
                 col = part.split("=")[0].strip()
                 update_data[col] = params.pop(0)
+            elif len(placeholders) == 0:
+                # Check for COALESCE(col, default) + N pattern
+                coalesce_match = re.match(
+                    r'(\w+)\s*=\s*COALESCE\((\w+),\s*(\d+)\)\s*\+\s*(\d+)',
+                    part.strip(), re.I
+                )
+                if coalesce_match:
+                    col = coalesce_match.group(1)
+                    inner_col = coalesce_match.group(2)
+                    default_val = int(coalesce_match.group(3))
+                    increment = int(coalesce_match.group(4))
+                    # Fetch current value using pre-parsed WHERE filters
+                    url = f"{_SUPABASE_URL}/rest/v1/{table}"
+                    get_headers = {k: v for k, v in _SUPABASE_HEADERS.items() if k != "Content-Type"}
+                    req_params = {"select": inner_col}
+                    for filter_col, filter_val in where_filters:
+                        req_params[filter_col] = f"eq.{filter_val}"
+                    r = requests.get(url, headers=get_headers, params=req_params, timeout=30)
+                    r.raise_for_status()
+                    rows = r.json()
+                    current = rows[0].get(inner_col, default_val) if rows else default_val
+                    if current is None:
+                        current = default_val
+                    update_data[col] = current + increment
+                else:
+                    # Literal value: col = value or col = 'string'
+                    col, _, val = part.partition("=")
+                    col = col.strip()
+                    val = val.strip().strip("'\"")
+                    try:
+                        val = int(val)
+                    except ValueError:
+                        pass
+                    update_data[col] = val
             else:
                 raise NotImplementedError("CASE WHEN in UPDATE not supported over PostgREST REST API")
 
-        where = self._parse_where(sql)
         url = f"{_SUPABASE_URL}/rest/v1/{table}"
 
         req_params = {}
-        if where:
-            filters = self._build_filters(where, params)
-            for f in filters:
-                req_params[f[0]] = f[1]
+        for filter_col, filter_val in where_filters:
+            req_params[filter_col] = f"eq.{filter_val}"
 
         r = requests.patch(url, headers=_SUPABASE_HEADERS, json=update_data, params=req_params, timeout=30)
         r.raise_for_status()
@@ -391,6 +468,24 @@ class _SupabaseRestCursor:
             filters = self._build_filters(where, params)
             for f in filters:
                 req_params[f[0]] = f[1]
+
+        # Supabase requires at least one filter for DELETE
+        if not req_params:
+            # Use table-specific fallback keys
+            pk_map = {
+                "meta": "key",
+                "habits": "id",
+                "habit_log": "id",
+                "quests": "id",
+                "kana_srs": "id",
+                "english_srs": "id",
+                "kanji_srs": "id",
+                "srs_reviews": "id",
+                "xp_log": "id",
+                "notes": "id",
+            }
+            pk_col = pk_map.get(table, "id")
+            req_params[pk_col] = "gt.0"
 
         r = requests.delete(url, headers={k: v for k, v in _SUPABASE_HEADERS.items() if k != "Content-Type"}, params=req_params, timeout=30)
         r.raise_for_status()
