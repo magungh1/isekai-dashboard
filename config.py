@@ -22,7 +22,7 @@ _defaults = {
     },
     "github": {
         "pr_max_age_days": "90",
-        "refresh_interval": "300",
+        "refresh_interval": "5",
         "notification_reasons": "review_requested,mention",
         "notify_timeout": "10",
         "title_snippet_length": "50",

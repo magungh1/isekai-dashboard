@@ -123,8 +123,6 @@ class PullRequests(Static):
         self.set_interval(refresh, self._auto_refresh_prs)
 
     def _auto_refresh_prs(self) -> None:
-        self._last_pr_keys = set()
-        self._last_notif_ids = set()
         self.fetch_prs()
 
     @work(thread=True, exclusive=True)
@@ -259,8 +257,6 @@ class PullRequests(Static):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "pr-refresh-btn":
-            self._last_pr_keys = set()
-            self._last_notif_ids = set()
             self.fetch_prs()
             return
 

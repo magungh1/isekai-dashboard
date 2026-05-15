@@ -70,7 +70,14 @@ def add_quest(title: str, category: str = "daily", deadline: str | None = None) 
 def toggle_quest(quest_id: int) -> Quest:
     conn = get_shared_connection()
     try:
-        cur = conn.execute("SELECT * FROM toggle_quest(%s)", (quest_id,))
+        row = conn.execute(
+            "SELECT * FROM quests WHERE id = %s", (quest_id,)
+        ).fetchone()
+        new_status = "done" if dict(row)["status"] == "pending" else "pending"
+        cur = conn.execute(
+            "UPDATE quests SET status = %s WHERE id = %s RETURNING *",
+            (new_status, quest_id),
+        )
         row = dict(cur.fetchone())
         conn.commit()
         return Quest(**row)
