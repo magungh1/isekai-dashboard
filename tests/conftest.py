@@ -76,7 +76,7 @@ def use_supabase_db(tmp_path, monkeypatch):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 status TEXT DEFAULT 'pending',
-                category TEXT DEFAULT 'daily',
+                category TEXT DEFAULT 'todo',
                 deadline TEXT,
                 sort_order INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

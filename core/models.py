@@ -8,7 +8,7 @@ class Quest:
     title: str
     status: str
     created_at: str
-    category: str = 'daily'
+    category: str = 'todo'
     deadline: str | None = None
     sort_order: int = 0
     completed_date: str | None = None

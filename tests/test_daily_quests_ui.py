@@ -12,7 +12,7 @@ class DummyApp(App):
 @pytest.mark.asyncio
 async def test_create_and_delete_quest():
     # Ensure starting clean
-    for q in get_quests_by_category("daily"):
+    for q in get_quests_by_category("todo"):
         delete_quest(q.id)
 
     app = DummyApp()
@@ -21,7 +21,7 @@ async def test_create_and_delete_quest():
         await pilot.pause()
 
         # Target the daily quests input
-        input_widget = app.query_one("#quest-input-daily")
+        input_widget = app.query_one("#quest-input-todo")
         
         # 1. Create a quest
         # We need to focus it and type
@@ -33,7 +33,7 @@ async def test_create_and_delete_quest():
         await pilot.pause(0.2)
 
         # Check that it was created
-        quests = get_quests_by_category("daily")
+        quests = get_quests_by_category("todo")
         assert len(quests) == 1
         assert quests[0].title == "My Test Quest"
 
@@ -52,7 +52,7 @@ async def test_create_and_delete_quest():
         await pilot.pause(0.2)
 
         # Check that it was deleted
-        quests = get_quests_by_category("daily")
+        quests = get_quests_by_category("todo")
         assert len(quests) == 0
         
         quest_items = app.query(QuestItem)

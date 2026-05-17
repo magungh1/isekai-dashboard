@@ -107,7 +107,7 @@ class IsekaiDashboard(App):
             from textual.widgets import TabbedContent
             tabs = quests.query_one("#quest-tabs", TabbedContent)
             active_id = tabs.active
-            category = active_id.replace("tab-", "") if active_id else "daily"
+            category = active_id.replace("tab-", "") if active_id else "todo"
             input_widget = quests.query_one(f"#quest-input-{category}")
             input_widget.focus()
         except Exception:

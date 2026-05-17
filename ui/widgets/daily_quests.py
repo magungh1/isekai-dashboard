@@ -8,8 +8,7 @@ from textual.widgets import Static, Label, ListView, ListItem, Input, TabbedCont
 
 from services.quests_service import (
     get_quests_by_category, add_quest, toggle_quest, delete_quest,
-    update_quest, reset_daily_quests, reset_weekly_quests, update_quests_order,
-    get_completed_quests
+    update_quest, update_quests_order, get_completed_quests
 )
 from services.xp_service import add_xp, XP_QUEST_COMPLETE
 from core.models import Quest
@@ -19,9 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 CATEGORY_COLORS = {
-    'daily': ('📋', 'quest-cat-daily'),
-    'weekly': ('💼', 'quest-cat-weekly'),
-    'goals': ('🎯', 'quest-cat-goals'),
+    'todo': ('📝', 'quest-cat-todo'),
 }
 
 
@@ -114,8 +111,6 @@ class QuestTab(Container):
 
     def compose(self) -> ComposeResult:
         placeholder = "+ Add new quest..."
-        if self._category == "goals":
-            placeholder = "+ Add goal (or: title | 2026-06-01)..."
         yield ListView(id=f"quest-list-{self._category}", classes="quest-list")
         
         if self._category != "done":
@@ -231,7 +226,7 @@ class QuestTab(Container):
         if not value:
             return
         deadline = None
-        if self._category == "goals" and "|" in value:
+        if "|" in value:
             parts = value.rsplit("|", 1)
             value = parts[0].strip()
             deadline = parts[1].strip()
@@ -295,29 +290,18 @@ class QuestTab(Container):
 
 
 class DailyQuests(Static):
-    """Tabbed quest widget: Daily, Weekly, Goals."""
+    """Tabbed quest widget: To Do, Habit Tracker, Done."""
 
     BINDINGS = []
 
     can_focus = True
 
     def compose(self) -> ComposeResult:
-        yield Label("📜 [ クエスト ] QUESTS", classes="widget-title")
+        yield Label("📝 [ クエスト ] TO DO", classes="widget-title")
         with TabbedContent(id="quest-tabs"):
-            with TabPane("📜 Daily", id="tab-daily"):
-                yield QuestTab(category="daily")
-            with TabPane("💼 Weekly", id="tab-weekly"):
-                yield QuestTab(category="weekly")
-            with TabPane("🎯 Goals", id="tab-goals"):
-                yield QuestTab(category="goals")
+            with TabPane("📝 To Do", id="tab-todo"):
+                yield QuestTab(category="todo")
+            with TabPane("📊 Habit Tracker", id="tab-habits"):
+                yield HabitsWidget()
             with TabPane("✅ Done", id="tab-done"):
                 yield QuestTab(category="done")
-            with TabPane("📊 Habits", id="tab-habits"):
-                yield HabitsWidget()
-
-    def _run_resets(self) -> None:
-        reset_daily_quests()
-        reset_weekly_quests()
-
-    def on_mount(self) -> None:
-        self._run_resets()
