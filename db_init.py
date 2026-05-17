@@ -236,12 +236,12 @@ def init_db(conn=None, *, close=True):
         count_row = conn.execute("SELECT COUNT(*) FROM quests").fetchone()
         if count_row and count_row[0] == 0:
             for title, category in [
-                ("Review Katakana Flashcards", "daily"),
-                ("Review Hiragana Flashcards", "daily"),
-                ("Read an ML paper", "daily"),
-                ("Check GitHub PRs", "weekly"),
-                ("Review English Vocabulary", "weekly"),
-                ("Catch up on ML training/inference", "goals"),
+                ("Review Katakana Flashcards", "todo"),
+                ("Review Hiragana Flashcards", "todo"),
+                ("Read an ML paper", "todo"),
+                ("Check GitHub PRs", "todo"),
+                ("Review English Vocabulary", "todo"),
+                ("Catch up on ML training/inference", "todo"),
             ]:
                 conn.execute(
                     "INSERT INTO quests (title, status, category) VALUES (%s, 'pending', %s)",

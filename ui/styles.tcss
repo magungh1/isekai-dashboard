@@ -104,21 +104,11 @@ NowPlaying { column-span: 2; }
 }
 
 /* Quest category color coding */
-.quest-cat-daily {
+.quest-cat-todo {
     color: #58a6ff;
 }
 
-.quest-cat-weekly {
-    color: #a5d6ff;
-}
-
-.quest-cat-goals {
-    color: #f0883e;
-}
-
-.quest-done.quest-cat-daily,
-.quest-done.quest-cat-weekly,
-.quest-done.quest-cat-goals {
+.quest-done.quest-cat-todo {
     color: #8b949e;
     text-style: strike;
 }

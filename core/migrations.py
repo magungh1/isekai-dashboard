@@ -162,6 +162,10 @@ MIGRATION_SQL = {
         CREATE INDEX IF NOT EXISTS idx_srs_reviews_card ON srs_reviews (deck, card_id);
         CREATE INDEX IF NOT EXISTS idx_srs_reviews_date ON srs_reviews (reviewed_at);
     """,
+    7: """
+        -- v7: Consolidate quest categories to 'todo'
+        UPDATE quests SET category = 'todo' WHERE category IN ('daily', 'weekly', 'goals');
+    """,
 }
 
 
@@ -216,7 +220,7 @@ def init_schema(conn=None, *, close=True) -> None:
             id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             title TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
-            category TEXT NOT NULL DEFAULT 'daily',
+            category TEXT NOT NULL DEFAULT 'todo',
             deadline TIMESTAMPTZ,
             sort_order INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

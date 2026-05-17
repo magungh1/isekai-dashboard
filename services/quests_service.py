@@ -1,13 +1,6 @@
-from datetime import date, timedelta
-
 from core.db import get_shared_connection, release_connection
 from core.models import Quest
 from config import get_int
-
-
-def _ensure_meta_table(conn):
-    conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
-    conn.commit()
 
 
 def get_quests_by_category(category: str, include_done: bool = False) -> list[Quest]:
@@ -53,7 +46,7 @@ def get_completed_quests(limit: int | None = None) -> list[Quest]:
         release_connection(conn)
 
 
-def add_quest(title: str, category: str = "daily", deadline: str | None = None) -> Quest:
+def add_quest(title: str, category: str = "todo", deadline: str | None = None) -> Quest:
     conn = get_shared_connection()
     try:
         cur = conn.execute(
@@ -96,43 +89,6 @@ def delete_quest(quest_id: int) -> None:
     conn = get_shared_connection()
     try:
         conn.execute("DELETE FROM quests WHERE id = %s", (quest_id,))
-        conn.commit()
-    finally:
-        release_connection(conn)
-
-
-def reset_daily_quests() -> None:
-    conn = get_shared_connection()
-    try:
-        _ensure_meta_table(conn)
-        today = date.today().isoformat()
-        row = conn.execute("SELECT value FROM meta WHERE key = 'last_daily_reset'").fetchone()
-        if row and row["value"] >= today:
-            return
-        conn.execute("UPDATE quests SET status = %s WHERE category = %s", ("pending", "daily"))
-        conn.execute(
-            "INSERT INTO meta (key, value) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = %s",
-            ("last_daily_reset", today, today),
-        )
-        conn.commit()
-    finally:
-        release_connection(conn)
-
-
-def reset_weekly_quests() -> None:
-    conn = get_shared_connection()
-    try:
-        _ensure_meta_table(conn)
-        today = date.today()
-        monday = (today - timedelta(days=today.weekday())).isoformat()
-        row = conn.execute("SELECT value FROM meta WHERE key = 'last_weekly_reset'").fetchone()
-        if row and row["value"] >= monday:
-            return
-        conn.execute("UPDATE quests SET status = %s WHERE category = %s", ("pending", "weekly"))
-        conn.execute(
-            "INSERT INTO meta (key, value) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = %s",
-            ("last_weekly_reset", monday, monday),
-        )
         conn.commit()
     finally:
         release_connection(conn)
