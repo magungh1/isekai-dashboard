@@ -163,8 +163,9 @@ MIGRATION_SQL = {
         CREATE INDEX IF NOT EXISTS idx_srs_reviews_date ON srs_reviews (reviewed_at);
     """,
     7: """
-        -- v7: Consolidate quest categories to 'todo'
-        UPDATE quests SET category = 'todo' WHERE category IN ('daily', 'weekly', 'goals');
+        UPDATE quests SET category = 'todo' WHERE category = 'daily';
+        UPDATE quests SET category = 'todo' WHERE category = 'weekly';
+        UPDATE quests SET category = 'todo' WHERE category = 'goals';
     """,
 }
 
